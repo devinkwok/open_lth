@@ -20,6 +20,8 @@ class Model(base.Model):
 
         def __init__(self, f_in: int, f_out: int, downsample=False):
             super(Model.Block, self).__init__()
+            self.relu1 = nn.ReLU()
+            self.relu2 = nn.ReLU()
 
             stride = 2 if downsample else 1
             self.conv1 = nn.Conv2d(f_in, f_out, kernel_size=3, stride=stride, padding=1, bias=False)
@@ -37,13 +39,14 @@ class Model(base.Model):
                 self.shortcut = nn.Sequential()
 
         def forward(self, x):
-            out = F.relu(self.bn1(self.conv1(x)))
+            out = self.relu1(self.bn1(self.conv1(x)))
             out = self.bn2(self.conv2(out))
             out += self.shortcut(x)
-            return F.relu(out)
+            return self.relu2(out)
 
     def __init__(self, plan, initializer, outputs=None):
         super(Model, self).__init__()
+        self.relu = nn.ReLU()
         outputs = outputs or 10
 
         # Initial convolution.
@@ -69,7 +72,7 @@ class Model(base.Model):
         self.apply(initializer)
 
     def forward(self, x):
-        out = F.relu(self.bn(self.conv(x)))
+        out = self.relu(self.bn(self.conv(x)))
         out = self.blocks(out)
         out = F.avg_pool2d(out, out.size()[3])
         out = out.view(out.size(0), -1)

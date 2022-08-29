@@ -20,11 +20,12 @@ class Model(base.Model):
 
         def __init__(self, in_filters, out_filters):
             super(Model.ConvModule, self).__init__()
+            self.relu = nn.ReLU()
             self.conv = nn.Conv2d(in_filters, out_filters, kernel_size=3, padding=1)
             self.bn = nn.BatchNorm2d(out_filters)
 
         def forward(self, x):
-            return F.relu(self.bn(self.conv(x)))
+            return self.relu(self.bn(self.conv(x)))
 
     def __init__(self, plan, initializer, outputs=10):
         super(Model, self).__init__()
