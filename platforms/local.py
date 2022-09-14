@@ -12,12 +12,12 @@ from platforms import base
 class Platform(base.Platform):
     @property
     def root(self):
-        return '/data2/rlange/open_lth/'
+        return '~/open_lth_data/'
 
     @property
     def dataset_root(self):
-        return '/data/'
+        return '~/open_lth_datasets/'
 
     @property
     def imagenet_root(self):
-        return '/data/imagenet/'
+        return '~/open_lth_imagenet/'

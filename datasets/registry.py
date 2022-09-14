@@ -33,15 +33,23 @@ def get(dataset_hparams: DatasetHparams, train: bool = True):
         dataset.randomize_labels(seed=seed, fraction=dataset_hparams.random_labels_fraction)
 
     if dataset_hparams.subset_start is not None or dataset_hparams.subset_stride != 1 or dataset_hparams.subset_end is not None:
-        if dataset_hparams.subsample_fraction is not None:
+        # allow start,end,stride when cv_fold is set
+        if dataset_hparams.subsample_fraction is not None and dataset_hparams.cv_fold is None:
             raise ValueError("Cannot have both subsample_fraction and subset_[start,end,stride]")
         subset_start = 0 if dataset_hparams.subset_start is None else dataset_hparams.subset_start
         subset_end = len(dataset) if dataset_hparams.subset_end is None else dataset_hparams.subset_end
         subset_stride = 1 if dataset_hparams.subset_stride is None else dataset_hparams.subset_stride
         dataset = Subset(dataset, np.arange(subset_start, subset_end, subset_stride))
 
-    if train and dataset_hparams.subsample_fraction is not None:
-        dataset.subsample(seed=seed, fraction=dataset_hparams.subsample_fraction)
+    if (train and dataset_hparams.subsample_fraction is not None) or (dataset_hparams.cv_fold is not None):
+        # allow test set to be subsampled when cv_fold is set
+        examples_to_retain = np.round(len(dataset) * dataset_hparams.subsample_fraction).astype(int)
+        if (dataset_hparams.cv_fold + 1) * examples_to_retain > len(dataset):
+            raise ValueError(f'Not enough examples ({len(dataset)}) for cross validation fold {dataset_hparams.cv_fold} at subsampling fraction {dataset_hparams.subsample_fraction}.')
+        start = dataset_hparams.cv_fold * examples_to_retain
+        end = start + examples_to_retain
+        examples_to_retain = np.random.RandomState(seed=seed+1).permutation(len(dataset))[start:end]
+        dataset = Subset(dataset, examples_to_retain)
 
     if train and dataset_hparams.blur_factor is not None:
         if not isinstance(dataset, base.ImageDataset):
