@@ -188,6 +188,7 @@ class TrainingHparams(Hparams):
     weight_decay: float = None
     apex_fp16: bool = False
     save_every_n_epochs: int = None
+    save_every_n_steps: int = None
 
     _name: str = 'Training Hyperparameters'
     _description: str = 'Hyperparameters that determine how the model is trained.'
@@ -204,6 +205,7 @@ class TrainingHparams(Hparams):
     _weight_decay: str = 'The L2 penalty to apply to the weights.'
     _apex_fp16: bool = 'Whether to train the model in float16 using the NVIDIA Apex library.'
     _save_every_n_epochs: int = 'Save weights epN_it0 every time epoch N is divisible by this value (default None)'
+    _save_every_n_steps: int = 'Save weights epN_itM every time epoch M is divisible by this value (default None)'
 
 
 @dataclass
