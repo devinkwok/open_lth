@@ -92,6 +92,43 @@ class Model(base.Model):
                 int(model_name.split('_')[2]) > 2)
 
     @staticmethod
+    def hidden_numel_from_model_name(model_name):
+        plan = Model.plan_from_model_name(model_name)
+        ch, h, w = 3, 32, 32
+        numel = ch * h * w
+        # Initial conv/bn/relu
+        ch = plan[0][0]
+        numel += ch * h * w * 3
+        # Blocks
+        for segment_index, (new_ch, num_blocks) in enumerate(plan):
+            for block_index in range(num_blocks):
+                downsample = segment_index > 0 and block_index == 0
+                has_projection = downsample or new_ch != ch
+                ch = new_ch
+                if downsample:
+                    h, w = h/2, w/2
+                # Each block is 7 layers, plus maybe two projection stages: conv/bn/relu/conv/bn/(proj?)/skip/relu
+                numel += ch * h * w * (9 if has_projection else 7)
+        # FC
+        numel += 10
+        return numel
+
+    @staticmethod
+    def plan_from_model_name(model_name):
+
+        if not Model.is_valid_model_name(model_name):
+            raise ValueError('Invalid model name: {}'.format(model_name))
+
+        name = model_name.split('_')
+        W = 16 if len(name) == 3 else int(name[3])
+        D = int(name[2])
+        if (D - 2) % 3 != 0:
+            raise ValueError('Invalid ResNet depth: {}'.format(D))
+        D = (D - 2) // 6
+        plan = [(W, D), (2*W, D), (4*W, D)]
+        return plan
+
+    @staticmethod
     def get_model_from_name(model_name, initializer,  outputs=10):
         """The naming scheme for a ResNet is 'cifar_resnet_N[_W]'.
 
@@ -110,18 +147,7 @@ class Model(base.Model):
         blocks, meaning there are three blocks per segment. Hence, D = 3.
         The name of the network would be 'cifar_resnet_20' or 'cifar_resnet_20_16'.
         """
-
-        if not Model.is_valid_model_name(model_name):
-            raise ValueError('Invalid model name: {}'.format(model_name))
-
-        name = model_name.split('_')
-        W = 16 if len(name) == 3 else int(name[3])
-        D = int(name[2])
-        if (D - 2) % 3 != 0:
-            raise ValueError('Invalid ResNet depth: {}'.format(D))
-        D = (D - 2) // 6
-        plan = [(W, D), (2*W, D), (4*W, D)]
-
+        plan = Model.plan_from_model_name(model_name)
         return Model(plan, initializer, outputs)
 
     @property

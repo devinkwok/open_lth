@@ -65,11 +65,26 @@ class Model(base.Model):
                 int(model_name.split('_')[2]) in [11, 13, 16, 19])
 
     @staticmethod
-    def get_model_from_name(model_name, initializer, outputs=10):
+    def hidden_numel_from_model_name(model_name):
+        plan = Model.plan_from_model_name(model_name)
+        ch, h, w = 3, 32, 32
+        numel = ch * h * w
+        for spec in plan:
+            if spec == 'M':
+                h, w, num_submodules = h/2, w/2, 1
+            else:
+                ch, num_submodules = spec, 3
+            numel += ch * h * w * num_submodules
+        # AvgPool
+        numel += 512
+        # FC
+        numel += 10
+        return numel
+
+    @staticmethod
+    def plan_from_model_name(model_name):
         if not Model.is_valid_model_name(model_name):
             raise ValueError('Invalid model name: {}'.format(model_name))
-
-        outputs = outputs or 10
 
         num = int(model_name.split('_')[2])
         if num == 11:
@@ -82,7 +97,12 @@ class Model(base.Model):
             plan = [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 256, 'M', 512, 512, 512, 512, 'M', 512, 512, 512, 512]
         else:
             raise ValueError('Unknown VGG model: {}'.format(model_name))
+        return plan
 
+    @staticmethod
+    def get_model_from_name(model_name, initializer, outputs=10):
+        plan = Model.plan_from_model_name(model_name)
+        outputs = outputs or 10
         return Model(plan, initializer, outputs)
 
     @property
