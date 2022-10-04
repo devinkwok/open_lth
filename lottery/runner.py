@@ -24,6 +24,8 @@ class LotteryRunner(Runner):
     desc: LotteryDesc
     verbose: bool = True
     evaluate_every_epoch: bool = True
+    save_every_n_epochs: int = None
+    save_every_n_steps: int = None
 
     @staticmethod
     def description():
@@ -82,7 +84,8 @@ class LotteryRunner(Runner):
         if self.verbose and get_platform().is_primary_process: print('-'*82 + '\nPretraining\n' + '-'*82)
         model = models.registry.get(self.desc.model_hparams, outputs=self.desc.pretrain_outputs)
         train.standard_train(model, location, self.desc.pretrain_dataset_hparams, self.desc.pretrain_training_hparams,
-                             verbose=self.verbose, evaluate_every_epoch=self.evaluate_every_epoch)
+            verbose=self.verbose, evaluate_every_epoch=self.evaluate_every_epoch,
+            save_every_n_epochs=self.save_every_n_epochs, save_every_n_steps=self.save_every_n_steps)
 
     def _establish_initial_weights(self):
         location = self.desc.run_path(self.replicate, 0)

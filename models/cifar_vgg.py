@@ -41,7 +41,7 @@ class Model(base.Model):
                 filters = spec
 
         self.layers = nn.Sequential(*layers)
-        self.fc = nn.Linear(512, outputs)
+        self.fc = nn.Linear(plan[-1], outputs)
         self.criterion = nn.CrossEntropyLoss()
 
         self.apply(initializer)
@@ -60,8 +60,8 @@ class Model(base.Model):
     @staticmethod
     def is_valid_model_name(model_name):
         return (model_name.startswith('cifar_vgg_') and
-                len(model_name.split('_')) == 3 and
-                model_name.split('_')[2].isdigit() and
+                5 > len(model_name.split('_')) > 2 and
+                all([x.isdigit() and int(x) > 0 for x in model_name.split('_')[2:]]) and
                 int(model_name.split('_')[2]) in [11, 13, 16, 19])
 
     @staticmethod
@@ -76,31 +76,39 @@ class Model(base.Model):
                 ch, num_submodules = spec, 3
             numel += ch * h * w * num_submodules
         # AvgPool
-        numel += 512
+        numel += plan[-1]
         # FC
         numel += 10
         return numel
 
     @staticmethod
     def plan_from_model_name(model_name):
+
         if not Model.is_valid_model_name(model_name):
             raise ValueError('Invalid model name: {}'.format(model_name))
 
-        num = int(model_name.split('_')[2])
+        name = model_name.split('_')
+        W = 64 if len(name) == 3 else int(name[3])
+        num = int(name[2])
         if num == 11:
-            plan = [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512]
+            plan = [W, 'M', 2*W, 'M', 4*W, 4*W, 'M', 8*W, 8*W, 'M', 8*W, 8*W]
         elif num == 13:
-            plan = [64, 64, 'M', 128, 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512]
+            plan = [W, W, 'M', 2*W, 2*W, 'M', 4*W, 4*W, 'M', 8*W, 8*W, 'M', 8*W, 8*W]
         elif num == 16:
-            plan = [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512, 'M', 512, 512, 512]
+            plan = [W, W, 'M', 2*W, 2*W, 'M', 4*W, 4*W, 4*W, 'M', 8*W, 8*W, 8*W, 'M', 8*W, 8*W, 8*W]
         elif num == 19:
-            plan = [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 256, 'M', 512, 512, 512, 512, 'M', 512, 512, 512, 512]
+            plan = [W, W, 'M', 2*W, 2*W, 'M', 4*W, 4*W, 4*W, 4*W, 'M', 8*W, 8*W, 8*W, 8*W, 'M', 8*W, 8*W, 8*W, 8*W]
         else:
             raise ValueError('Unknown VGG model: {}'.format(model_name))
         return plan
 
     @staticmethod
     def get_model_from_name(model_name, initializer, outputs=10):
+        """The naming scheme for VGG is 'cifar_vgg_N[_W]'.
+        N is number of layers, W is width.
+        If W is not set, the default width is 64 in the first convolution layers
+        and 512 in the last convolution layers.
+        """
         plan = Model.plan_from_model_name(model_name)
         outputs = outputs or 10
         return Model(plan, initializer, outputs)
