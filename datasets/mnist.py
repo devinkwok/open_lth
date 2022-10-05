@@ -11,7 +11,7 @@ from datasets import base
 from platforms.platform import get_platform
 
 
-class Dataset(base.ImageDataset):
+class Dataset(base.ImageDataset, base.NdarrayDataset):
     """The MNIST dataset."""
 
     @staticmethod
@@ -24,17 +24,20 @@ class Dataset(base.ImageDataset):
     def num_classes(): return 10
 
     @staticmethod
-    def get_train_set(use_augmentation):
-        # No augmentation for MNIST.
-        train_set = torchvision.datasets.MNIST(
-            train=True, root=os.path.join(get_platform().dataset_root, 'mnist'), download=True)
-        return Dataset(train_set.data, train_set.targets)
+    def _get_data(train):
+        return torchvision.datasets.MNIST(train=train, root=os.path.join(
+            get_platform().dataset_root, 'mnist'), download=True)
 
     @staticmethod
-    def get_test_set():
-        test_set = torchvision.datasets.MNIST(
-            train=False, root=os.path.join(get_platform().dataset_root, 'mnist'), download=True)
-        return Dataset(test_set.data, test_set.targets)
+    def get_train_set(use_augmentation, train_split=None):
+        # No augmentation for MNIST.
+        data, targets = Dataset.get_dataset(True, train_split)
+        return Dataset(data, targets)
+
+    @staticmethod
+    def get_test_set(test_split=None):
+        data, targets = Dataset.get_dataset(False, test_split)
+        return Dataset(data, targets)
 
     def __init__(self,  examples, labels):
         tensor_transforms = [torchvision.transforms.Normalize(mean=[0.1307], std=[0.3081])]

@@ -62,12 +62,20 @@ class Dataset(base.ImageDataset):
         return [torchvision.transforms.Resize(256), torchvision.transforms.CenterCrop(224)]
 
     @staticmethod
-    def get_train_set(use_augmentation):
+    def get_labels(train):
+        raise NotImplementedError("Train test split not implemented for ImageNet.")
+
+    @staticmethod
+    def get_train_set(use_augmentation, train_split=None):
+        if train_split is not None:  #TODO
+            raise RuntimeError("Train test split not implemented for ImageNet.")
         transforms = Dataset._augment_transforms() if use_augmentation else Dataset._transforms()
         return Dataset(os.path.join(get_platform().imagenet_root, 'train'), transforms)
 
     @staticmethod
-    def get_test_set():
+    def get_test_set(test_split=None):
+        if test_split is not None:  #TODO
+            raise RuntimeError("Train test split not implemented for ImageNet.")
         return Dataset(os.path.join(get_platform().imagenet_root, 'val'), Dataset._transforms())
 
     @staticmethod

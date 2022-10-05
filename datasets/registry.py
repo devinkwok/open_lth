@@ -13,20 +13,36 @@ from platforms.platform import get_platform
 registered_datasets = {'cifar10': cifar10, 'mnist': mnist, 'imagenet': imagenet}
 
 
+def get_train_test_split(dataset_hparams: DatasetHparams):
+    if dataset_hparams.custom_train_test_split:
+        train_test_split = base.TrainTestSplit(
+                registered_datasets[dataset_hparams.dataset_name].Dataset,
+                dataset_hparams.train_test_split_fraction,
+                dataset_hparams.split_randomize,
+                (dataset_hparams.transformation_seed or 0) + 2,
+                dataset_hparams.split_fold
+            )  # custom train/test split
+        return train_test_split.get_train_mask()
+    return None
+
+
 def get(dataset_hparams: DatasetHparams, train: bool = True):
     """Get the train or test set corresponding to the hyperparameters."""
 
-    seed = dataset_hparams.transformation_seed or 0
-
-    # Get the dataset itself.
-    if dataset_hparams.dataset_name in registered_datasets:
-        use_augmentation = train and not dataset_hparams.do_not_augment
-        if train:
-            dataset = registered_datasets[dataset_hparams.dataset_name].Dataset.get_train_set(use_augmentation)
-        else:
-            dataset = registered_datasets[dataset_hparams.dataset_name].Dataset.get_test_set()
-    else:
+    if dataset_hparams.dataset_name not in registered_datasets:
         raise ValueError('No such dataset: {}'.format(dataset_hparams.dataset_name))
+
+    seed = dataset_hparams.transformation_seed or 0
+    data_class = registered_datasets[dataset_hparams.dataset_name].Dataset
+    # custom train/test split
+    train_split = get_train_test_split(dataset_hparams)
+    # Get the dataset itself.
+    use_augmentation = train and not dataset_hparams.do_not_augment
+    if train:
+        dataset = data_class.get_train_set(use_augmentation, train_split=train_split)
+    else:
+        test_split = None if train_split is None else np.logical_not(train_split)
+        dataset = data_class.get_test_set(test_split=test_split)
 
     # Transform the dataset.
     if train and dataset_hparams.random_labels_fraction is not None:

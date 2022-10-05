@@ -29,7 +29,7 @@ class CIFAR10(torchvision.datasets.CIFAR10):
         get_platform().barrier()
 
 
-class Dataset(base.ImageDataset):
+class Dataset(base.ImageDataset, base.NdarrayDataset):
     """The CIFAR-10 dataset."""
 
     @staticmethod
@@ -42,15 +42,20 @@ class Dataset(base.ImageDataset):
     def num_classes(): return 10
 
     @staticmethod
-    def get_train_set(use_augmentation):
-        augment = [torchvision.transforms.RandomHorizontalFlip(), torchvision.transforms.RandomCrop(32, 4)]
-        train_set = CIFAR10(train=True, root=os.path.join(get_platform().dataset_root, 'cifar10'), download=True)
-        return Dataset(train_set.data, np.array(train_set.targets), augment if use_augmentation else [])
+    def get_data(train):
+        return CIFAR10(train=train, root=os.path.join(
+            get_platform().dataset_root, 'cifar10'), download=True)
 
     @staticmethod
-    def get_test_set():
-        test_set = CIFAR10(train=False, root=os.path.join(get_platform().dataset_root, 'cifar10'), download=True)
-        return Dataset(test_set.data, np.array(test_set.targets))
+    def get_train_set(use_augmentation, train_split=None):
+        augment = [torchvision.transforms.RandomHorizontalFlip(), torchvision.transforms.RandomCrop(32, 4)]
+        data, targets = Dataset.get_dataset(True, train_split)
+        return Dataset(data, targets, augment if use_augmentation else [])
+
+    @staticmethod
+    def get_test_set(test_split=None):
+        data, targets = Dataset.get_dataset(False, test_split)
+        return Dataset(data, targets)
 
     def __init__(self,  examples, labels, image_transforms=None):
         super(Dataset, self).__init__(examples, labels, image_transforms or [],

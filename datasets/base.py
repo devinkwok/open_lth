@@ -4,6 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import abc
+from typing import Type
 import numpy as np
 from PIL import Image
 import torch
@@ -32,12 +33,17 @@ class Dataset(torch.utils.data.Dataset, abc.ABC):
 
     @staticmethod
     @abc.abstractmethod
-    def get_train_set(use_augmentation: bool) -> 'Dataset':
+    def get_train_set(use_augmentation: bool, train_split=None) -> 'Dataset':
         pass
 
     @staticmethod
     @abc.abstractmethod
-    def get_test_set() -> 'Dataset':
+    def get_test_set(test_split=None) -> 'Dataset':
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
+    def get_labels(train: bool) -> 'Dataset':
         pass
 
     def __init__(self, examples: np.ndarray, labels):
@@ -84,6 +90,85 @@ class Dataset(torch.utils.data.Dataset, abc.ABC):
         """If there is custom logic for example loading, this method should be overridden."""
 
         return self._examples[index], self._labels[index]
+
+
+class TrainTestSplit():
+    def __init__(self, data_class: Type[Dataset], train_test_split_fraction: float = 0, randomize: bool = False, seed: int = 0, split_cv_fold: int = 0) -> None:
+        self.data_class = data_class
+        self.seed = seed if randomize else None
+        n_train = self.data_class.num_train_examples()
+        n_test = self.data_class.num_test_examples()
+        n_class = self.data_class.num_classes()
+        self.n_swap = int(round(train_test_split_fraction * n_test))
+        self.fold = split_cv_fold
+        if self.n_swap <= 0 or self.fold < 0 \
+                or (self.n_swap * (self.fold + 1)) > n_train \
+                or (self.n_swap * (self.fold + 1)) > n_test:
+            raise ValueError("Invalid fraction to swap between train and test: " + \
+                f"{train_test_split_fraction} of {n_train} and {n_test} offset by {self.fold} is {self.n_swap}")
+        if self.n_swap % n_class != 0:
+            raise ValueError(f"Fraction to swap {self.n_swap}/{n_test} does not divide number of classes {n_class}.")
+
+    def get_train_mask(self):
+        # get labels for both train and test data
+        labels = np.concatenate([self.data_class.get_labels(True), self.data_class.get_labels(False)])
+        n_train = self.data_class.num_train_examples()
+        n_test = self.data_class.num_test_examples()
+        n_class = self.data_class.num_classes()
+        n_per_class = self.n_swap // n_class
+        train_idx = np.arange(n_train)
+        test_idx = np.arange(n_test) + n_train  # index the combined array
+        # randomize which examples are swapped (otherwise go from start of dataset in order)
+        if self.seed is not None:
+            np.random.RandomState(seed=self.seed).shuffle(train_idx)
+            np.random.RandomState(seed=self.seed+1).shuffle(test_idx)
+            labels = labels[np.concatenate([train_idx, test_idx])]
+        # for each label, choose a fixed fraction to swap between train and test
+        for label in range(n_class):
+            matches = (labels == label)
+            if np.sum(matches[-n_test:]) !=  n_test // n_class:
+                raise ValueError(f"Number of examples per label is not equal: {np.sum(matches[-n_test:])}/{n_test} for class {label}")
+            label_idx = np.nonzero(matches)[0]  # labels are 1 dimensional
+            # train at front, test at back, offset by self.fold
+            start = self.fold * n_per_class
+            end = start + n_per_class
+            # subtract n_train to index test examples only
+            train_to_test = label_idx[start:end]
+            test_to_train = label_idx[-end:]
+            test_to_train = test_to_train[:n_per_class]  # do this in 2 steps to avoid [-n:-0] indexing
+            if np.max(train_to_test) > n_train:
+                raise ValueError(f"Not enough training examples of class {label} to swap {n_per_class} at fold {self.fold}.")
+            test_idx[test_to_train - n_train] = train_idx[train_to_test]
+        # use boolean indexing to make it easier to do train and test splits
+        is_train = np.ones([len(labels)], dtype=bool)
+        is_train[test_idx] = False
+        return is_train
+
+
+class NdarrayDataset(Dataset):
+    """For datasets where all examples can be stored in a single numpy ndarray.
+    Implements common functions needed for custom train test split."""
+
+    @staticmethod
+    @abc.abstractmethod
+    def get_data(train):
+        pass
+
+    @classmethod
+    def get_labels(cls, train):
+        return np.array(cls.get_data(train).targets)
+
+    @classmethod
+    def get_dataset(cls, train, split):
+        if split is None:
+            dataset = cls.get_data(train)
+            return dataset.data, np.array(dataset.targets)
+        else:
+            train_data = cls.get_data(True)
+            test_data = cls.get_data(False)
+            data = np.concatenate([train_data.data, test_data.data], axis=0)
+            targets = np.concatenate([train_data.targets, test_data.targets], axis=0)
+            return data[split], targets[split]
 
 
 class ImageDataset(Dataset):

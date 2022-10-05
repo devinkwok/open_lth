@@ -7,6 +7,7 @@ import numpy as np
 
 from datasets import base, registry
 from foundations import hparams
+from open_lth.datasets import cifar10
 from testing import test_case
 
 
@@ -71,6 +72,33 @@ class TestRegistry(test_case.TestCase):
         self.assertEqual(registry.iterations_per_epoch(self.dataset_hparams), 1000)
         self.dataset_hparams.subsample_fraction = 0.1
         self.assertEqual(registry.iterations_per_epoch(self.dataset_hparams), 100)
+
+    def test_custom_train_test_split(self):
+        def analyze_split(fraction, randomize, fold):
+            train_test_split = base.TrainTestSplit(cifar10.Dataset, fraction, randomize, 0, fold)
+            mask = train_test_split.get_train_mask()
+            train_idx = np.nonzero(np.logical_not(mask[:50000]))[0]
+            test_idx = np.nonzero(mask[50000:])[0]
+            return np.min(train_idx), np.max(train_idx), np.min(test_idx), np.max(test_idx)
+
+        def assert_close(num_a, num_b, tolerance=1000):
+            self.assertTrue(abs(num_a - num_b) < tolerance)
+
+        train_min, train_max, test_min, test_max = analyze_split(0.25, False, 0)
+        assert_close(train_min, 0)
+        assert_close(train_max, 2500)
+        assert_close(test_min, 7500)
+        assert_close(test_max, 10000)
+        train_min, train_max, test_min, test_max = analyze_split(0.25, False, 3)
+        assert_close(train_min, 7500)
+        assert_close(train_max, 10000)
+        assert_close(test_min, 0)
+        assert_close(test_max, 2500)
+        train_min, train_max, test_min, test_max = analyze_split(0.5, True, 1)
+        assert_close(train_min, 0)
+        assert_close(train_max, 50000)
+        assert_close(test_min, 0)
+        assert_close(test_max, 10000)
 
 
 test_case.main()

@@ -135,6 +135,10 @@ class DatasetHparams(Hparams):
     unsupervised_labels: str = None
     blur_factor: int = None
     cv_fold: int = None
+    custom_train_test_split: bool = False
+    train_test_split_fraction: float = 0
+    split_randomize: bool = False
+    split_fold: int = 0
 
     _name: str = 'Dataset Hyperparameters'
     _description: str = 'Hyperparameters that select the dataset, data augmentation, and other data transformations.'
@@ -151,6 +155,10 @@ class DatasetHparams(Hparams):
     _unsupervised_labels: str = 'Replace the standard labels with alternative, unsupervised labels. Example: rotation'
     _blur_factor: str = 'Blur the training set by downsampling and then upsampling by this multiple.'
     _cv_fold: str = 'Take the nth disjoint subsample when using subsample_fraction, where (cv_fold+1)*subsample_fraction < 1.'
+    _custom_train_test_split: str = 'Use custom train/test split.'
+    _train_test_split_fraction: str = 'Controls fraction of train and test examples to swap (equal number per label). 0 is default test split, 1 replaces test set with train examples.'
+    _split_randomize: str = 'If custom_train_test_split, use transformation_seed to randomize the examples swapped between train/test.'
+    _split_fold: str = 'If custom_train_test_split, chooses nth disjoint subset of examples to swap between train/test.'
 
 
 @dataclass
