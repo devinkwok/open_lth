@@ -55,7 +55,8 @@ class LotteryRunner(Runner):
     @staticmethod
     def create_from_args(args: argparse.Namespace) -> 'LotteryRunner':
         return LotteryRunner(args.replicate, args.levels, LotteryDesc.create_from_args(args),
-                             not args.quiet, not args.evaluate_only_at_end)
+                             not args.quiet, not args.evaluate_only_at_end,
+                             args.save_every_n_epochs, args.save_every_n_steps)
 
     def display_output_location(self):
         print(self.desc.run_path(self.replicate, 0))
