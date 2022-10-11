@@ -39,7 +39,8 @@ def get(model_hparams: ModelHparams, outputs=None):
     model = None
     for registered_model in registered_models:
         if registered_model.is_valid_model_name(model_hparams.model_name):
-            model = registered_model.get_model_from_name(model_hparams.model_name, init_fn, outputs)
+            model = registered_model.get_model_from_name(model_hparams.model_name,
+                        init_fn, outputs, model_hparams.batchnorm_replace)
             break
 
     if model is None:

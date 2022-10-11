@@ -18,22 +18,25 @@ class Model(base.Model):
     class Block(nn.Module):
         """A ResNet block."""
 
-        def __init__(self, f_in: int, f_out: int, downsample=False):
+        def __init__(self, f_in: int, f_out: int, downsample=False, batchnorm_type=None):
             super(Model.Block, self).__init__()
             self.relu1 = nn.ReLU()
             self.relu2 = nn.ReLU()
 
             stride = 2 if downsample else 1
-            self.conv1 = nn.Conv2d(f_in, f_out, kernel_size=3, stride=stride, padding=1, bias=False)
-            self.bn1 = nn.BatchNorm2d(f_out)
-            self.conv2 = nn.Conv2d(f_out, f_out, kernel_size=3, stride=1, padding=1, bias=False)
-            self.bn2 = nn.BatchNorm2d(f_out)
+            self.conv1 = nn.Conv2d(f_in, f_out, kernel_size=3, stride=stride, padding=1,
+                    bias=Model.use_conv_bias(batchnorm_type))
+            self.bn1 = Model.get_batchnorm(f_out, batchnorm_type)
+            self.conv2 = nn.Conv2d(f_out, f_out, kernel_size=3, stride=1, padding=1,
+                    bias=Model.use_conv_bias(batchnorm_type))
+            self.bn2 = Model.get_batchnorm(f_out, batchnorm_type)
 
             # No parameters for shortcut connections.
             if downsample or f_in != f_out:
                 self.shortcut = nn.Sequential(
-                    nn.Conv2d(f_in, f_out, kernel_size=1, stride=2, bias=False),
-                    nn.BatchNorm2d(f_out)
+                    nn.Conv2d(f_in, f_out, kernel_size=1, stride=2,
+                            bias=Model.use_conv_bias(batchnorm_type)),
+                    Model.get_batchnorm(f_out, batchnorm_type)
                 )
             else:
                 self.shortcut = nn.Sequential()
@@ -44,22 +47,23 @@ class Model(base.Model):
             out += self.shortcut(x)
             return self.relu2(out)
 
-    def __init__(self, plan, initializer, outputs=None):
+    def __init__(self, plan, initializer, outputs=None, batchnorm_type=None):
         super(Model, self).__init__()
         self.relu = nn.ReLU()
         outputs = outputs or 10
 
         # Initial convolution.
         current_filters = plan[0][0]
-        self.conv = nn.Conv2d(3, current_filters, kernel_size=3, stride=1, padding=1, bias=False)
-        self.bn = nn.BatchNorm2d(current_filters)
+        self.conv = nn.Conv2d(3, current_filters, kernel_size=3, stride=1, padding=1,
+                            bias=Model.use_conv_bias(batchnorm_type))
+        self.bn = Model.get_batchnorm(current_filters)
 
         # The subsequent blocks of the ResNet.
         blocks = []
         for segment_index, (filters, num_blocks) in enumerate(plan):
             for block_index in range(num_blocks):
                 downsample = segment_index > 0 and block_index == 0
-                blocks.append(Model.Block(current_filters, filters, downsample))
+                blocks.append(Model.Block(current_filters, filters, downsample, batchnorm_type))
                 current_filters = filters
 
         self.blocks = nn.Sequential(*blocks)
@@ -129,7 +133,7 @@ class Model(base.Model):
         return plan
 
     @staticmethod
-    def get_model_from_name(model_name, initializer,  outputs=10):
+    def get_model_from_name(model_name, initializer,  outputs=10, batchnorm_type=None):
         """The naming scheme for a ResNet is 'cifar_resnet_N[_W]'.
 
         The ResNet is structured as an initial convolutional layer followed by three "segments"
@@ -148,7 +152,7 @@ class Model(base.Model):
         The name of the network would be 'cifar_resnet_20' or 'cifar_resnet_20_16'.
         """
         plan = Model.plan_from_model_name(model_name)
-        return Model(plan, initializer, outputs)
+        return Model(plan, initializer, outputs, batchnorm_type)
 
     @property
     def loss_criterion(self):

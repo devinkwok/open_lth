@@ -14,19 +14,18 @@ from pruning import sparse_global
 
 
 class ResNet(torchvision.models.ResNet):
-    def __init__(self, block, layers, num_classes=1000, width=64):
+    def __init__(self, block, layers, num_classes=1000, width=64, batchnorm_type=None):
         """To make it possible to vary the width, we need to override the constructor of the torchvision resnet."""
 
         torch.nn.Module.__init__(self)  # Skip the parent constructor. This replaces it.
-        self._norm_layer = torch.nn.BatchNorm2d
         self.inplanes = width
         self.dilation = 1
         self.groups = 1
         self.base_width = 64
 
         # The initial convolutional layer.
-        self.conv1 = torch.nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3, bias=False)
-        self.bn1 = self._norm_layer(self.inplanes)
+        self.conv1 = torch.nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3, bias=base.Model.use_conv_bias(batchnorm_type))
+        self.bn1 = base.Model.get_batchnorm(self.inplanes, batchnorm_type)
         self.relu = torch.nn.ReLU(inplace=True)
         self.maxpool = torch.nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
@@ -52,10 +51,10 @@ class ResNet(torchvision.models.ResNet):
 class Model(base.Model):
     """A residual neural network as originally designed for ImageNet."""
 
-    def __init__(self, model_fn, initializer, outputs=None):
+    def __init__(self, model_fn, initializer, outputs=None, batchnorm_type=None):
         super(Model, self).__init__()
 
-        self.model = model_fn(num_classes=outputs or 1000)
+        self.model = model_fn(num_classes=outputs or 1000, batchnorm_type=batchnorm_type)
         self.criterion = torch.nn.CrossEntropyLoss()
         self.apply(initializer)
 
@@ -74,7 +73,7 @@ class Model(base.Model):
                 int(model_name.split('_')[2]) in [18, 34, 50, 101, 152, 200])
 
     @staticmethod
-    def get_model_from_name(model_name, initializer,  outputs=1000):
+    def get_model_from_name(model_name, initializer,  outputs=1000, batchnorm_type=None):
         """Name: imagenet_resnet_D[_W].
 
         D is the model depth (e.g., 50 for ResNet-50). W is the model width - the number of filters in the first
@@ -96,7 +95,7 @@ class Model(base.Model):
             width = int(model_name.split('_')[3])
             model_fn = partial(model_fn, width=width)
 
-        return Model(model_fn, initializer, outputs)
+        return Model(model_fn, initializer, outputs, batchnorm_type)
 
     @property
     def loss_criterion(self):

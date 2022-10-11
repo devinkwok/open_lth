@@ -48,7 +48,7 @@ class Model(base.Model):
                 all([x.isdigit() and int(x) > 0 for x in model_name.split('_')[2:]]))
 
     @staticmethod
-    def get_model_from_name(model_name, initializer, outputs=None):
+    def get_model_from_name(model_name, initializer, outputs=None, batchnorm_type=None):
         """The name of a model is mnist_lenet_N1[_N2...].
 
         N1, N2, etc. are the number of neurons in each fully-connected layer excluding the
@@ -62,7 +62,7 @@ class Model(base.Model):
             raise ValueError('Invalid model name: {}'.format(model_name))
 
         plan = [int(n) for n in model_name.split('_')[2:]]
-        return Model(plan, initializer, outputs)
+        return Model(plan, initializer, outputs)  # does not use batchnorm
 
     @property
     def loss_criterion(self):

@@ -166,6 +166,7 @@ class ModelHparams(Hparams):
     model_name: str
     model_init: str
     batchnorm_init: str
+    batchnorm_replace: str = None
     batchnorm_frozen: bool = False
     output_frozen: bool = False
     others_frozen: bool = False
@@ -176,6 +177,7 @@ class ModelHparams(Hparams):
     _model_name: str = 'The name of the model. Examples: mnist_lenet, cifar_resnet_20, cifar_vgg_16'
     _model_init: str = 'The model initializer. Examples: kaiming_normal, kaiming_uniform, binary, orthogonal'
     _batchnorm_init: str = 'The batchnorm initializer. Examples: uniform, fixed'
+    _batchnorm_replace: str = 'Replace batchnorm layer: bn, linear, none-bias (add bias if missing), none'
     _batchnorm_frozen: str = 'If True, all batch normalization parameters are frozen at initialization.'
     _output_frozen: str = 'If True, all outputt layer parameters are frozen at initialization.'
     _others_frozen: str = 'If true, all other (non-output, non-batchnorm) parameters are frozen at initialization.'

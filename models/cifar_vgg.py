@@ -18,16 +18,16 @@ class Model(base.Model):
     class ConvModule(nn.Module):
         """A single convolutional module in a VGG network."""
 
-        def __init__(self, in_filters, out_filters):
+        def __init__(self, in_filters, out_filters, batchnorm_type):
             super(Model.ConvModule, self).__init__()
             self.relu = nn.ReLU()
             self.conv = nn.Conv2d(in_filters, out_filters, kernel_size=3, padding=1)
-            self.bn = nn.BatchNorm2d(out_filters)
+            self.bn = Model.get_batchnorm(out_filters, batchnorm_type)
 
         def forward(self, x):
             return self.relu(self.bn(self.conv(x)))
 
-    def __init__(self, plan, initializer, outputs=10):
+    def __init__(self, plan, initializer, outputs=10, batchnorm_type=None):
         super(Model, self).__init__()
 
         layers = []
@@ -37,7 +37,7 @@ class Model(base.Model):
             if spec == 'M':
                 layers.append(nn.MaxPool2d(kernel_size=2, stride=2))
             else:
-                layers.append(Model.ConvModule(filters, spec))
+                layers.append(Model.ConvModule(filters, spec, batchnorm_type))
                 filters = spec
 
         self.layers = nn.Sequential(*layers)
@@ -103,7 +103,7 @@ class Model(base.Model):
         return plan
 
     @staticmethod
-    def get_model_from_name(model_name, initializer, outputs=10):
+    def get_model_from_name(model_name, initializer, outputs=10, batchnorm_type=None):
         """The naming scheme for VGG is 'cifar_vgg_N[_W]'.
         N is number of layers, W is width.
         If W is not set, the default width is 64 in the first convolution layers
@@ -111,7 +111,7 @@ class Model(base.Model):
         """
         plan = Model.plan_from_model_name(model_name)
         outputs = outputs or 10
-        return Model(plan, initializer, outputs)
+        return Model(plan, initializer, outputs, batchnorm_type)
 
     @property
     def loss_criterion(self):

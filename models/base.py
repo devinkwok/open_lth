@@ -71,6 +71,22 @@ class Model(torch.nn.Module, abc.ABC):
         if not get_platform().exists(save_location): get_platform().makedirs(save_location)
         get_platform().save_model(self.state_dict(), paths.model(save_location, save_step))
 
+    @staticmethod
+    def get_batchnorm(n_filters, batchnorm_type=None):
+        if batchnorm_type is None or batchnorm_type == "bn":
+            return torch.nn.BatchNorm2d(n_filters)
+        if batchnorm_type == "linear":
+            return torch.nn.Conv2d(n_filters, n_filters, kernel_size=1, bias=True)
+        if batchnorm_type == "none-bias" or batchnorm_type == "none":
+            return torch.nn.Identity(n_filters)
+        raise ValueError(f"Batchnorm type {batchnorm_type} must be None, 'linear', 'none-bias', or 'none'.")
+
+    @staticmethod
+    def use_conv_bias(batchnorm_type):
+        if batchnorm_type is None:
+            return False
+        return batchnorm_type.endswith("bias")
+
 
 class DataParallel(Model, torch.nn.DataParallel):
     def __init__(self, module: Model):
@@ -86,7 +102,8 @@ class DataParallel(Model, torch.nn.DataParallel):
     def loss_criterion(self): return self.module.loss_criterion
 
     @staticmethod
-    def get_model_from_name(model_name, outputs, initializer): raise NotImplementedError
+    def get_model_from_name(model_name, initializer, outputs, batchnorm_type):
+        raise NotImplementedError
 
     @staticmethod
     def is_valid_model_name(model_name): raise NotImplementedError
