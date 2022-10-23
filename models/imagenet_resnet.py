@@ -25,6 +25,8 @@ class ResNet(torchvision.models.ResNet):
 
         # The initial convolutional layer.
         self.conv1 = torch.nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3, bias=base.Model.use_conv_bias(batchnorm_type))
+        if batchnorm_type is not None and batchnorm_type != "bn":
+            raise ValueError(f"Batchnorm replacements not implemented for ImageNet ResNet")
         self.bn1 = base.Model.get_batchnorm(self.inplanes, batchnorm_type)
         self.relu = torch.nn.ReLU(inplace=True)
         self.maxpool = torch.nn.MaxPool2d(kernel_size=3, stride=2, padding=1)

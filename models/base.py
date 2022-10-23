@@ -13,6 +13,26 @@ import lottery.desc
 from platforms.platform import get_platform
 
 
+class LazyInitLayerNorm(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.layernorm = None
+    def _lazy_init_layernorm(self, x):
+        self.layernorm = torch.nn.LayerNorm(x.shape)
+    def forward(self, x):
+        if self.layernorm is None:
+            self._lazy_init_layernorm(x)
+        return self.layernorm(x)
+    def _load_from_state_dict(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
+        weight_key = f"{prefix}layernorm.weight"
+        if weight_key in state_dict:
+            if self.layernorm is None:  # init layernorm based on shape of weights in state_dict
+                self._lazy_init_layernorm(state_dict[weight_key])
+            super()._load_from_state_dict(state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs)
+        else:
+            raise ValueError(f"Missing LayerNorm params: run LazyInitLayerNorm on data before saving state_dict to register correct shapes.")
+
+
 class Model(torch.nn.Module, abc.ABC):
     """The base class used by all models in this codebase."""
 
@@ -75,11 +95,13 @@ class Model(torch.nn.Module, abc.ABC):
     def get_batchnorm(n_filters, batchnorm_type=None):
         if batchnorm_type is None or batchnorm_type == "bn":
             return torch.nn.BatchNorm2d(n_filters)
+        if batchnorm_type == "layernorm":
+            return LazyInitLayerNorm()
         if batchnorm_type == "linear":
             return torch.nn.Conv2d(n_filters, n_filters, kernel_size=1, bias=True)
         if batchnorm_type == "none-bias" or batchnorm_type == "none":
             return torch.nn.Identity(n_filters)
-        raise ValueError(f"Batchnorm type {batchnorm_type} must be None, 'linear', 'none-bias', or 'none'.")
+        raise ValueError(f"Batchnorm type {batchnorm_type} must be None, 'layernorm', 'linear', 'none-bias', or 'none'.")
 
     @staticmethod
     def use_conv_bias(batchnorm_type):
