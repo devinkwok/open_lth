@@ -6,7 +6,6 @@
 import typing
 import warnings
 
-import torch
 from datasets.base import DataLoader
 import datasets.registry
 from foundations import hparams
@@ -153,12 +152,6 @@ def standard_train(
 
     train_loader = datasets.registry.get(dataset_hparams, train=True)
     test_loader = datasets.registry.get(dataset_hparams, train=False)
-
-    model.eval()  # TODO hack: run the model on test data to initialize LazyInitLayerNorm
-    with torch.no_grad():
-        for examples, _ in test_loader:
-            model(examples[0:1, ...])
-            break
     callbacks = standard_callbacks.standard_callbacks(
         training_hparams, train_loader, test_loader, start_step=start_step,
         verbose=verbose, evaluate_every_epoch=evaluate_every_epoch,
