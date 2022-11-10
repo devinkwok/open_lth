@@ -3,11 +3,13 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
 import abc
 import argparse
 import copy
 from dataclasses import dataclass, fields, MISSING
 from typing import Tuple
+from pathlib import Path
 
 
 @dataclass
@@ -119,6 +121,40 @@ class Hparams(abc.ABC):
                 fs[f.name] = value
         elements = [f'{name}={fs[name]}' for name in sorted(fs.keys())]
         return 'Hparams(' + ', '.join(elements) + ')'
+
+
+def ckpt_hparam_path(ckpt_file: Path) -> Path:
+    # find parent directory
+    ckpt_dir = None
+    for path in ckpt_file.parents:
+        if path.stem.startswith("train_") or path.stem.startswith("lottery_"):
+            ckpt_dir = path
+            break
+    if ckpt_dir is None:
+        raise RuntimeError(f"Experiment directory containing {ckpt_file} not found.")
+    # find first available hparam file
+    for root, _, files in os.walk(ckpt_dir):
+        for file in files:
+            if file == "hparams.log":
+                return Path(root) / Path(file)
+    raise RuntimeError(f"Hparam file not found in {ckpt_dir}.")
+
+
+def load_hparams_from_file(hparams_log: Path) -> dict:
+    with open(hparams_log, 'r') as f:
+        hparam_lines = f.readlines()
+    hparams = {}
+    for line in hparam_lines:
+        line = line.strip()
+        if line.endswith(" Hyperparameters"):
+            header = line[:-len(" Hyperparameters")]
+            hparams[header] = {}
+        elif line.startswith("* "):
+            k, v = line[len("* "):].split(" => ")
+            hparams[header][k] = v
+        else:
+            raise ValueError(line)
+    return hparams
 
 
 @dataclass

@@ -18,7 +18,7 @@ class Model(base.Model):
     class ConvModule(nn.Module):
         """A single convolutional module in a VGG network."""
 
-        def __init__(self, in_filters, out_filters, batchnorm_type):
+        def __init__(self, in_filters, out_filters, batchnorm_type=None):
             super(Model.ConvModule, self).__init__()
             self.relu = nn.ReLU()
             self.conv = nn.Conv2d(in_filters, out_filters, kernel_size=3, padding=1)
