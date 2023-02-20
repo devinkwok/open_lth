@@ -5,12 +5,23 @@
 
 import numpy as np
 from torch.utils.data import Subset
-from datasets import base, cifar10, mnist, imagenet
+from datasets import base, cifar10, cifar10class5, cifar100, cifar100class20, cifar100class10, mnist, imagenet, svhn, eurosat, pixelpermutedcifar10
 from foundations.hparams import DatasetHparams
 from platforms.platform import get_platform
 
 
-registered_datasets = {'cifar10': cifar10, 'mnist': mnist, 'imagenet': imagenet}
+registered_datasets = {
+    'cifar10': cifar10,
+    'cifar10class5': cifar10class5,
+    'cifar100': cifar100,
+    'cifar100class20': cifar100class20,
+    'cifar100class10': cifar100class10,
+    'mnist': mnist,
+    'imagenet': imagenet,
+    'svhn': svhn,
+    'eurosat': eurosat,
+    'pixelpermutedcifar10': pixelpermutedcifar10,
+}
 
 
 def get_train_test_split(dataset_hparams: DatasetHparams):
