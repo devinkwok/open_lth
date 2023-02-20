@@ -123,23 +123,6 @@ class Hparams(abc.ABC):
         return 'Hparams(' + ', '.join(elements) + ')'
 
 
-def ckpt_hparam_path(ckpt_file: Path) -> Path:
-    # find parent directory
-    ckpt_dir = None
-    for path in ckpt_file.parents:
-        if path.stem.startswith("train_") or path.stem.startswith("lottery_"):
-            ckpt_dir = path
-            break
-    if ckpt_dir is None:
-        raise RuntimeError(f"Experiment directory containing {ckpt_file} not found.")
-    # find first available hparam file
-    for root, _, files in os.walk(ckpt_dir):
-        for file in files:
-            if file == "hparams.log":
-                return Path(root) / Path(file)
-    raise RuntimeError(f"Hparam file not found in {ckpt_dir}.")
-
-
 def load_hparams_from_file(hparams_log: Path) -> dict:
     with open(hparams_log, 'r') as f:
         hparam_lines = f.readlines()
@@ -213,9 +196,9 @@ class ModelHparams(Hparams):
     _model_name: str = 'The name of the model. Examples: mnist_lenet, cifar_resnet_20, cifar_vgg_16'
     _model_init: str = 'The model initializer. Examples: kaiming_normal, kaiming_uniform, binary, orthogonal'
     _batchnorm_init: str = 'The batchnorm initializer. Examples: uniform, fixed'
-    _batchnorm_replace: str = 'Replace batchnorm layer: bn, linear, none-bias (add bias if missing), none'
+    _batchnorm_replace: str = 'Replace batchnorm layer: bn, layernorm, linear, none-bias (add bias if missing), none'
     _batchnorm_frozen: str = 'If True, all batch normalization parameters are frozen at initialization.'
-    _output_frozen: str = 'If True, all outputt layer parameters are frozen at initialization.'
+    _output_frozen: str = 'If True, all output layer parameters are frozen at initialization.'
     _others_frozen: str = 'If true, all other (non-output, non-batchnorm) parameters are frozen at initialization.'
     _others_frozen_exceptions: str = 'A comma-separated list of any tensors that should not be frozen.'
 
