@@ -18,16 +18,18 @@ class ResNet(torchvision.models.ResNet):
         """To make it possible to vary the width, we need to override the constructor of the torchvision resnet."""
 
         torch.nn.Module.__init__(self)  # Skip the parent constructor. This replaces it.
+        if base.Model.use_conv_bias(batchnorm_type):
+            raise ValueError(f"Adding bias to convolution layers is not implemented for imagenet_resnet: batchnorm_type={batchnorm_type}")
+        # in self._make_layer of parent class, self._norm_layer is used by block to instantiate the correct norm class (e.g. batchnorm)
+        self._norm_layer = partial(base.Model.get_batchnorm, batchnorm_type=batchnorm_type)
         self.inplanes = width
         self.dilation = 1
         self.groups = 1
         self.base_width = 64
 
         # The initial convolutional layer.
-        self.conv1 = torch.nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3, bias=base.Model.use_conv_bias(batchnorm_type))
-        if batchnorm_type is not None and batchnorm_type != "bn":
-            raise ValueError(f"Batchnorm replacements not implemented for ImageNet ResNet")
-        self.bn1 = base.Model.get_batchnorm(self.inplanes, batchnorm_type)
+        self.conv1 = torch.nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3, bias=False)
+        self.bn1 = self._norm_layer(self.inplanes)
         self.relu = torch.nn.ReLU(inplace=True)
         self.maxpool = torch.nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 

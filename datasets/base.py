@@ -152,22 +152,21 @@ class NdarrayDataset(Dataset):
     @staticmethod
     @abc.abstractmethod
     def get_data(train):
-        pass
+        pass  # return data, targets as np arrays
 
     @classmethod
     def get_labels(cls, train):
-        return np.array(cls.get_data(train).targets)
+        return cls.get_data(train)[1]
 
     @classmethod
-    def get_dataset(cls, train, split):
+    def get_data_split(cls, train, split):
         if split is None:
-            dataset = cls.get_data(train)
-            return dataset.data, np.array(dataset.targets)
+            return cls.get_data(train)
         else:
-            train_data = cls.get_data(True)
-            test_data = cls.get_data(False)
-            data = np.concatenate([train_data.data, test_data.data], axis=0)
-            targets = np.concatenate([train_data.targets, test_data.targets], axis=0)
+            train_data, train_targets = cls.get_data(True)
+            test_data, test_targets = cls.get_data(False)
+            data = np.concatenate([train_data, test_data], axis=0)
+            targets = np.concatenate([train_targets, test_targets], axis=0)
             return data[split], targets[split]
 
 

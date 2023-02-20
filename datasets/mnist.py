@@ -3,6 +3,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import numpy as np
 import os
 from PIL import Image
 import torchvision
@@ -25,18 +26,19 @@ class Dataset(base.ImageDataset, base.NdarrayDataset):
 
     @staticmethod
     def _get_data(train):
-        return torchvision.datasets.MNIST(train=train, root=os.path.join(
+        dataset = torchvision.datasets.MNIST(train=train, root=os.path.join(
             get_platform().dataset_root, 'mnist'), download=True)
+        return dataset.data, np.array(dataset.targets)
 
     @staticmethod
     def get_train_set(use_augmentation, train_split=None):
         # No augmentation for MNIST.
-        data, targets = Dataset.get_dataset(True, train_split)
+        data, targets = Dataset.get_data_split(True, train_split)
         return Dataset(data, targets)
 
     @staticmethod
     def get_test_set(test_split=None):
-        data, targets = Dataset.get_dataset(False, test_split)
+        data, targets = Dataset.get_data_split(False, test_split)
         return Dataset(data, targets)
 
     def __init__(self,  examples, labels):

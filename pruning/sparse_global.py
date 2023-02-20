@@ -23,7 +23,7 @@ class PruningHparams(hparams.PruningHparams):
     _name = 'Hyperparameters for Sparse Global Pruning'
     _description = 'Hyperparameters that modify the way pruning occurs.'
     _pruning_fraction = 'The fraction of additional weights to prune from the network.'
-    _layers_to_ignore = 'A comma-separated list of addititonal tensors that should not be pruned.'
+    _pruning_layers_to_ignore = 'A comma-separated list of addititonal tensors that should not be pruned.'
 
 
 class Strategy(base.Strategy):

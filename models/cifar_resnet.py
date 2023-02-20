@@ -56,7 +56,7 @@ class Model(base.Model):
         current_filters = plan[0][0]
         self.conv = nn.Conv2d(3, current_filters, kernel_size=3, stride=1, padding=1,
                             bias=Model.use_conv_bias(batchnorm_type))
-        self.bn = Model.get_batchnorm(current_filters)
+        self.bn = Model.get_batchnorm(current_filters, batchnorm_type)
 
         # The subsequent blocks of the ResNet.
         blocks = []
