@@ -47,7 +47,7 @@ class Dataset(base.ImageDataset, base.NdarrayDataset):
     @staticmethod
     def get_data(train):
         dataset = CIFAR10(train=train, root=os.path.join(
-            get_platform().dataset_root, 'cifar10'), download=True)
+            get_platform().dataset_root, 'cifar10'), download=get_platform().download_data)
         # permute pixels
         data = dataset.data.reshape(-1, 32*32, 3)
         permutation = np.array(Dataset.PIXEL_PERMUTATION).reshape(1, 32*32, 1)

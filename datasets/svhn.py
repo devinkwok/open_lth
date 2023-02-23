@@ -29,7 +29,7 @@ class Dataset(base.ImageDataset, base.NdarrayDataset):
     def get_data(train):
         dataset = torchvision.datasets.SVHN(
                 root=os.path.join(get_platform().dataset_root, 'svhn'),
-                split='train' if train else 'test', download=True)
+                split='train' if train else 'test', download=get_platform().download_data)
         return dataset.data, np.array(dataset.labels)
 
     @staticmethod

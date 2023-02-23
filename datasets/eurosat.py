@@ -30,7 +30,7 @@ class Dataset(base.ImageDataset, base.NdarrayDataset):
 
     @staticmethod
     def get_data(train):
-        dataset = torchvision.datasets.EuroSAT(root=os.path.join(get_platform().dataset_root, 'eurosat'), download=True)
+        dataset = torchvision.datasets.EuroSAT(root=os.path.join(get_platform().dataset_root, 'eurosat'), download=get_platform().download_data)
         # default train/test split
         train_mask = np.ones(len(dataset), dtype=bool)
         train_mask[Dataset.TEST_SPLIT] = False

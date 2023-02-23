@@ -73,6 +73,12 @@ class Platform(Hparams):
         """The directory where imagenet will be stored."""
         pass
 
+    @property
+    @abc.abstractmethod
+    def download_data(self):
+        """Allow automatic downloading of datasets."""
+        pass
+
     # Mediate access to files.
     @staticmethod
     def open(file, mode='r'):

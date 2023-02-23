@@ -4,20 +4,25 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
-import pathlib
+from pathlib import Path
 
 from platforms import base
 
 
 class Platform(base.Platform):
+
     @property
     def root(self):
-        return '/data2/rlange/open_lth/'
+        return Path(os.environ.get("HOME")) / 'scratch/open_lth_data/'
 
     @property
     def dataset_root(self):
-        return '/data/'
+        return Path(os.environ.get("SLURM_TMPDIR")) / 'data'
 
     @property
     def imagenet_root(self):
-        return '/data/imagenet/'
+        return Path(os.environ.get("SLURM_TMPDIR")) / 'data/imagenet'
+
+    @property
+    def download_data(self):
+        return False

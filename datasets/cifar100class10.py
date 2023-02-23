@@ -32,7 +32,7 @@ class CIFAR100(torchvision.datasets.CIFAR100):
 class Dataset(base.ImageDataset, base.NdarrayDataset):
     """CIFAR-100 dataset with 10 superclass labels."""
     SUPERCOARSE_LABELS = ['aquatic_mammals-fish', 'flowers-fruit_and_vegetables', 'food_containers-people', 'household_electrical_devices-household_furniture', 'insects-non-insect_invertebrates', 'large_carnivores-large_omnivores_and_herbivores', 'large_man-made_outdoor_things-large_natural_outdoor_scenes', 'medium_mammals-small_mammals', 'reptiles-trees', 'vehicles_1-vehicles_2']
-    SUPERCLASS_LABEL_MAP = [4, 1, 14, 8, 0, 6, 7, 7, 18, 3,
+    COARSE_LABEL_MAP = [4, 1, 14, 8, 0, 6, 7, 7, 18, 3,
                             3, 14, 9, 18, 7, 11, 3, 9, 7, 11,
                             6, 11, 5, 10, 7, 6, 13, 15, 3, 15,
                             0, 11, 1, 10, 12, 14, 16, 9, 11, 5,
@@ -42,8 +42,8 @@ class Dataset(base.ImageDataset, base.NdarrayDataset):
                             2, 10, 0, 1, 16, 12, 9, 13, 15, 13,
                             16, 19, 2, 4, 6, 19, 5, 5, 8, 19,
                             18, 1, 2, 15, 6, 0, 17, 8, 14, 13]
-    SUPERCLASS_LABEL_MAP = [[0, 0, 1, 2, 1, 3, 3, 4, 5, 6, 6, 5, 7, 4, 2, 8, 7, 8, 9, 9][i]  \
-                            for i in SUPERCLASS_LABEL_MAP]
+    SUPERCOARSE_LABEL_MAP = [[0, 0, 1, 2, 1, 3, 3, 4, 5, 6, 6, 5, 7, 4, 2, 8, 7, 8, 9, 9][i]  \
+                            for i in COARSE_LABEL_MAP]
 
     @staticmethod
     def num_train_examples(): return 50000
@@ -57,8 +57,8 @@ class Dataset(base.ImageDataset, base.NdarrayDataset):
     @staticmethod
     def get_data(train):
         dataset = CIFAR100(train=train, root=os.path.join(
-            get_platform().dataset_root, 'cifar100'), download=True)
-        dataset.targets = [Dataset.SUPERCLASS_LABEL_MAP[i] for i in dataset.targets]
+            get_platform().dataset_root, 'cifar100'), download=get_platform().download_data)
+        dataset.targets = [Dataset.SUPERCOARSE_LABEL_MAP[i] for i in dataset.targets]
         return dataset.data, np.array(dataset.targets)
 
     @staticmethod

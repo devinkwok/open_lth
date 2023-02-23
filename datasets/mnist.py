@@ -27,7 +27,7 @@ class Dataset(base.ImageDataset, base.NdarrayDataset):
     @staticmethod
     def _get_data(train):
         dataset = torchvision.datasets.MNIST(train=train, root=os.path.join(
-            get_platform().dataset_root, 'mnist'), download=True)
+            get_platform().dataset_root, 'mnist'), download=get_platform().download_data)
         return dataset.data, np.array(dataset.targets)
 
     @staticmethod
