@@ -3,13 +3,11 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import os
 import abc
 import argparse
 import copy
 from dataclasses import dataclass, fields, MISSING
 from typing import Tuple
-from pathlib import Path
 
 
 @dataclass
@@ -121,23 +119,6 @@ class Hparams(abc.ABC):
                 fs[f.name] = value
         elements = [f'{name}={fs[name]}' for name in sorted(fs.keys())]
         return 'Hparams(' + ', '.join(elements) + ')'
-
-
-def load_hparams_from_file(hparams_log: Path) -> dict:
-    with open(hparams_log, 'r') as f:
-        hparam_lines = f.readlines()
-    hparams = {}
-    for line in hparam_lines:
-        line = line.strip()
-        if line.endswith(" Hyperparameters"):
-            header = line[:-len(" Hyperparameters")]
-            hparams[header] = {}
-        elif line.startswith("* "):
-            k, v = line[len("* "):].split(" => ")
-            hparams[header][k] = v
-        else:
-            raise ValueError(line)
-    return hparams
 
 
 @dataclass

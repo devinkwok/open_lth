@@ -24,10 +24,14 @@ registered_datasets = {
 }
 
 
+def get_dataset(dataset_hparams: DatasetHparams):
+    return registered_datasets[dataset_hparams.dataset_name].Dataset
+
+
 def get_train_test_split(dataset_hparams: DatasetHparams):
     if dataset_hparams.custom_train_test_split:
         train_test_split = base.TrainTestSplit(
-                registered_datasets[dataset_hparams.dataset_name].Dataset,
+                get_dataset(dataset_hparams),
                 dataset_hparams.train_test_split_fraction,
                 dataset_hparams.split_randomize,
                 (dataset_hparams.transformation_seed or 0) + 2,
@@ -44,7 +48,7 @@ def get(dataset_hparams: DatasetHparams, train: bool = True):
         raise ValueError('No such dataset: {}'.format(dataset_hparams.dataset_name))
 
     seed = dataset_hparams.transformation_seed or 0
-    data_class = registered_datasets[dataset_hparams.dataset_name].Dataset
+    data_class = get_dataset(dataset_hparams)
     # custom train/test split
     train_split = get_train_test_split(dataset_hparams)
     # Get the dataset itself.
@@ -101,7 +105,7 @@ def iterations_per_epoch(dataset_hparams: DatasetHparams):
     """Get the number of iterations per training epoch."""
 
     if dataset_hparams.dataset_name in registered_datasets:
-        num_train_examples = registered_datasets[dataset_hparams.dataset_name].Dataset.num_train_examples()
+        num_train_examples = get_dataset(dataset_hparams).num_train_examples()
     else:
         raise ValueError('No such dataset: {}'.format(dataset_hparams.dataset_name))
 
@@ -115,7 +119,7 @@ def num_classes(dataset_hparams: DatasetHparams):
     """Get the number of classes."""
 
     if dataset_hparams.dataset_name in registered_datasets:
-        num_classes = registered_datasets[dataset_hparams.dataset_name].Dataset.num_classes()
+        num_classes = get_dataset(dataset_hparams).num_classes()
     else:
         raise ValueError('No such dataset: {}'.format(dataset_hparams.dataset_name))
 

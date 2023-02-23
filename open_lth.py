@@ -9,6 +9,7 @@ import sys
 from cli import runner_registry
 from cli import arg_utils
 import platforms.registry
+from make_exp_tables import make_tables
 
 
 def main():
@@ -56,6 +57,9 @@ def main():
         sys.exit(0)
 
     platform.run_job(runner_registry.get(runner_name).create_from_args(args).run)
+
+    # Summarize all experiments and branches.
+    make_tables()
 
 
 if __name__ == '__main__':
