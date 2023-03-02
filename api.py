@@ -81,8 +81,8 @@ def get_dataloader(dataset_hparams: DatasetHparams, n_examples=None, train=False
     return dataset_registry.get(dataset_hparams, train=train)
 
 
-def get_model(model_hparams: ModelHparams) -> torch.nn.Module:
-    model = model_registry.get(model_hparams)
+def get_model(model_hparams: ModelHparams, outputs=None) -> torch.nn.Module:
+    model = model_registry.get(model_hparams, outputs=outputs)
     return model.to(device=get_platform().torch_device)
 
 
@@ -94,8 +94,9 @@ def get_state_dict(ckpt: Path):
 
 
 def get_ckpt(ckpt: Path):
+    dataset_hparams = get_dataset_hparams(ckpt)
     model_hparams = get_model_hparams(ckpt)
-    model = get_model(model_hparams)
+    model = get_model(model_hparams, outputs=num_classes(dataset_hparams))
     params = get_state_dict(ckpt)
     model.load_state_dict(params)
     return model_hparams, model, params
