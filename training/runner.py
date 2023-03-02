@@ -45,5 +45,5 @@ class TrainingRunner(Runner):
             print(f'Output Location: {self.desc.run_path(self.replicate)}' + '\n' + '='*82 + '\n')
         self.desc.save(self.desc.run_path(self.replicate))
         train.standard_train(
-            models.registry.get(self.desc.model_hparams), self.desc.run_path(self.replicate),
+            models.registry.get(self.desc.model_hparams, outputs=self.desc.train_outputs), self.desc.run_path(self.replicate),
             self.desc.dataset_hparams, self.desc.training_hparams, evaluate_every_epoch=self.evaluate_every_epoch)

@@ -46,7 +46,7 @@ class TrainingDesc(desc.Desc):
 
     @property
     def train_outputs(self):
-        datasets_registry.num_classes(self.dataset_hparams)
+        return datasets_registry.num_classes(self.dataset_hparams)
 
     def run_path(self, replicate, experiment='main'):
         return os.path.join(get_platform().root, self.hashname, f'replicate_{replicate}', experiment)
