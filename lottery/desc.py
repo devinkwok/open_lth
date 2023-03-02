@@ -134,11 +134,11 @@ class LotteryDesc(Desc):
 
     @property
     def pretrain_outputs(self):
-        datasets_registry.num_classes(self.pretrain_dataset_hparams)
+        return datasets_registry.num_classes(self.pretrain_dataset_hparams)
 
     @property
     def train_outputs(self):
-        datasets_registry.num_classes(self.dataset_hparams)
+        return datasets_registry.num_classes(self.dataset_hparams)
 
     def run_path(self, replicate: int, pruning_level: Union[str, int], experiment: str = 'main'):
         """The location where any run is stored."""
