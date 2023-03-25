@@ -99,7 +99,7 @@ def get_ckpt(ckpt: Path):
     model = get_model(model_hparams, outputs=num_classes(dataset_hparams))
     params = get_state_dict(ckpt)
     model.load_state_dict(params)
-    return model_hparams, model, params
+    return (model_hparams, dataset_hparams), model, params
 
 
 """
