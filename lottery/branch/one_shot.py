@@ -2,13 +2,13 @@
 from json import load
 
 from lottery.branch import base
-import models.registry
 from pruning.pruned_model import PrunedModel
 from training import train
 
 from foundations import paths
 from pruning.sparse_global import PruningHparams as SparseGlobalPruningHparams
 from pruning.sparse_global import Strategy as SparseGlobalPruningStrategy
+from utils.branch_utils import load_dense_model
 
 class Branch(base.Branch):
     def branch_function(self,
@@ -33,9 +33,7 @@ class Branch(base.Branch):
         else:
             raise ValueError(f'Invalid starting point {start_at}')
 
-        # note: load the dense model from level_pretrain, not the previous IMP iteration!
-        pretrain_root = self.lottery_desc.run_path(self.replicate, "pretrain")
-        dense_model = models.registry.load(pretrain_root, state_step, self.lottery_desc.model_hparams)
+        dense_model = load_dense_model(self, state_step)
         # get one-shot magnitude pruning mask
         pruning_hparams = SparseGlobalPruningHparams(pruning_strategy="sparse_global",
                                                      pruning_fraction=pruning_fraction,

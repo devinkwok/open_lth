@@ -6,11 +6,11 @@
 import torch
 
 from lottery.branch import base
-import models.registry
 from pruning.mask import Mask
 from pruning.pruned_model import PrunedModel
 from training import train
 from utils.tensor_utils import vectorize, unvectorize, shuffle_tensor, shuffle_state_dict
+from utils.branch_utils import load_dense_model
 
 
 class Branch(base.Branch):
@@ -60,9 +60,7 @@ class Branch(base.Branch):
             raise ValueError(f'Invalid starting point {start_at}')
 
         # Train the model with the new mask.
-        # note: load the dense model from level_pretrain, not the previous IMP iteration!
-        pretrain_root = self.lottery_desc.run_path(self.replicate, "pretrain")
-        dense_model = models.registry.load(pretrain_root, state_step, self.lottery_desc.model_hparams, outputs=self.lottery_desc.train_outputs)
+        dense_model = load_dense_model(self, state_step)
         model = PrunedModel(dense_model, mask)
         train.standard_train(model, self.branch_root, self.lottery_desc.dataset_hparams,
                              self.lottery_desc.training_hparams, start_step=start_step, verbose=self.verbose)

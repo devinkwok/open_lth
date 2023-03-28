@@ -7,12 +7,12 @@ import torch
 from pathlib import Path
 
 from lottery.branch import base
-import models.registry
 from pruning.mask import Mask
 from pruning.pruned_model import PrunedModel
 from training import train
 from utils.perm_utils import permute_state_dict, save_perm_info
 from utils.file_utils import get_file_in_another_level
+from utils.branch_utils import load_dense_model, get_output_layers
 
 
 class Branch(base.Branch):
@@ -21,8 +21,9 @@ class Branch(base.Branch):
                         pruning_infer_mask_from: str = "level",
                         pruning_infer_permutation_from: str = "level",
                         start_at: str = 'rewind',
-                        layers_to_ignore: str = ''):
-        
+                        layers_to_ignore: str = '',
+                        reinit_outputs: bool = False,
+    ):
         # load mask of same level from source_model_dir
         mask_file = get_file_in_another_level(Path(pruning_mask_source_file), self.level, pruning_infer_mask_from)
         mask = Mask.load(mask_file.parent)  # strip out mask.pth
@@ -53,9 +54,19 @@ class Branch(base.Branch):
             raise ValueError(f'Invalid starting point {start_at}')
 
         # Train the model with the new mask.
-        # note: load the dense model from level_pretrain, not the previous IMP iteration!
-        pretrain_root = self.lottery_desc.run_path(self.replicate, "pretrain")
-        model = PrunedModel(models.registry.load(pretrain_root, state_step, self.lottery_desc.model_hparams), mask)
+        dense_model = load_dense_model(self, state_step)
+
+        # reinitialize mask at output layers
+        if reinit_outputs:
+            output_layers = get_output_layers(self)
+            for k in output_layers:
+                if k in mask:
+                    mask[k] = torch.ones_like(dense_model.state_dict()[k])
+        else:  # if the output sizes differ, must reinitialize output layers
+            if any([mask[k].shape != dense_model.state_dict()[k].shape for k in mask.keys()]):
+                raise ValueError(f'Sizes differ between mask and model, set --reinit_outputs?')
+
+        model = PrunedModel(dense_model, mask)
         train.standard_train(model, self.branch_root, self.lottery_desc.dataset_hparams,
                              self.lottery_desc.training_hparams, start_step=start_step, verbose=self.verbose)
 
