@@ -73,11 +73,11 @@ def get_dataset(dataset_hparams: DatasetHparams):
     return dataset_registry.registered_datasets[dataset_hparams.dataset_name].Dataset
 
 
-def get_dataloader(dataset_hparams: DatasetHparams, n_examples=None, train=False, batch_size=5000):
+def get_dataloader(dataset_hparams: DatasetHparams, n_examples=None, train=False, batch_size=None):
     dataset_hparams.do_not_augment = True
     dataset_hparams.subset_end = n_examples
     # hparams.subset_stride = 1  #FIXME for some reason this is a str when loading from hparams file
-    dataset_hparams.batch_size = batch_size if n_examples is None else n_examples
+    dataset_hparams.batch_size = n_examples if batch_size is None else batch_size
     return dataset_registry.get(dataset_hparams, train=train)
 
 
