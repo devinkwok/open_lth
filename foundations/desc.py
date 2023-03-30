@@ -7,6 +7,7 @@ import abc
 import argparse
 from dataclasses import dataclass, fields
 import hashlib
+import json
 
 from foundations.hparams import Hparams
 from foundations import paths
@@ -55,6 +56,12 @@ class Desc(abc.ABC):
         if not get_platform().exists(output_location): get_platform().makedirs(output_location)
 
         fields_dict = {f.name: getattr(self, f.name) for f in fields(self)}
-        hparams_strs = [fields_dict[k].display for k in sorted(fields_dict) if isinstance(fields_dict[k], Hparams)]
+        hparams = {k: fields_dict[k].to_dict() for k in sorted(fields_dict) if isinstance(fields_dict[k], Hparams)}
         with get_platform().open(paths.hparams(output_location), 'w') as fp:
-            fp.write('\n'.join(hparams_strs))
+            json.dump(hparams, fp, indent=4)
+        # sanity check: test that loading from json gives same hparams
+        with get_platform().open(paths.hparams(output_location), 'r') as fp:
+            test_dict = json.load(fp)
+            for k, v in test_dict.items():
+                test_hparams = type(fields_dict[k]).create_from_dict(v)
+                assert fields_dict[k].equals(test_hparams), (fields_dict[k], test_hparams)

@@ -131,6 +131,7 @@ class Branch(Runner):
 
             args = {f.name: getattr(self.desc.branch_hparams, f.name)
                     for f in fields(self.BranchHparams) if not f.name.startswith('_')}
+            self.desc.save(self.branch_root)
             self.branch_function(**args)
 
     # Initialize instances and subclasses (metaprogramming).

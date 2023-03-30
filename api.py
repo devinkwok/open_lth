@@ -1,5 +1,6 @@
 from pathlib import Path
 from itertools import chain
+import json
 import torch
 import numpy as np
 
@@ -41,15 +42,25 @@ def _find_path_in_exp(path: Path, name_to_find) -> Path:
 """
 Get objects
 """
-def get_hparams_dict(path: Path) -> dict:
-    path = _find_path_in_exp(path, hparams("").name)
+def get_hparams_dict(path: Path, branch_name="main") -> dict:
+    try:  # prefer to load from .json
+        path = _find_path_in_exp(path, str(hparams(branch_name)))
+        with get_platform().open(path, 'r') as fp:
+            return json.load(fp)
+    except RuntimeError:  # deprecated: load hparams.log instead
+        path = _find_path_in_exp(path, str(Path(branch_name) / "hparams.log"))
+        return _parse_hparams_dict_from_log(path)
+
+# deprecated: for loading old hparams.log files (THIS DOES NOT HANDLE NESTED HPARAMS)
+def _parse_hparams_dict_from_log(path):
     with open(path, 'r') as f:
         hparam_lines = f.readlines()
     hparams_dict = {}
     for line in hparam_lines:
         line = line.strip()
         if line.endswith(" Hyperparameters"):
-            header = line[:-len(" Hyperparameters")]
+            # translate keys so they match .json: make lowercase, replace space with _ and shorten "hparams"
+            header = line.replace(" ", "_").replace("Hyperparameters", "hparams").lower()
             hparams_dict[header] = {}
         elif line.startswith("* "):
             k, v = line[len("* "):].split(" => ")
@@ -60,12 +71,12 @@ def get_hparams_dict(path: Path) -> dict:
 
 
 def get_dataset_hparams(path: Path) -> dict:
-    dataset_hparams = get_hparams_dict(path)["Dataset"]
+    dataset_hparams = get_hparams_dict(path)["dataset_hparams"]
     return DatasetHparams.create_from_dict(dataset_hparams)
 
 
 def get_model_hparams(path: Path) -> dict:
-    model_hparams = get_hparams_dict(path)["Model"]
+    model_hparams = get_hparams_dict(path)["model_hparams"]
     return ModelHparams.create_from_dict(model_hparams)
 
 

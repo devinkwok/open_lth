@@ -1,5 +1,5 @@
 # run using python -m make_run_hparams_table
-from json import load
+import json
 from pathlib import Path
 import pandas as pd
 from collections import defaultdict
@@ -41,30 +41,42 @@ def get_training_log(save_dir: Path) -> Path:
     return log_data
 
 
-"""
-Table summarizing experiment hyperparameters
-"""
-def canonical_dict(ckpt_dir):
-    nested_hparams = get_hparams_dict(ckpt_dir)
+def get_json_info(branch_dir):
+    json_info = {}
+    for file in branch_dir.glob("*.json"):
+        with open(file, 'r') as f:
+            json_info[file.stem] = json.load(f)
+    return json_info
+
+
+def flatten_dict(nested_hparams, prefix=None):
     flat_hparams = {}
-    for category, hparam_dict in nested_hparams.items():
-        for k, v in hparam_dict.items():
-            flat_hparams[f"{category}.{k}"] = v
+    for k, v in nested_hparams.items():
+        if prefix is not None:
+            k = f"{prefix}.{k}"
+        if isinstance(v, dict):
+            flat_hparams = {**flat_hparams, **flatten_dict(v, prefix=k)}
+        else:
+            flat_hparams[k] = v
     return flat_hparams
 
 
+"""
+Table summarizing experiment hyperparameters
+"""
 def make_hparam_table(ckpt_root):
     print(f"Summarizing hparams for all experiments in {ckpt_root}")
-    hparams = []
+    rows = []
     for subdir in ckpt_root.glob("*/"):
         if subdir.is_dir():
             print(subdir)
             # save last items in log so that it is easy to check if an experiment was run
-            log_info = {"Logger.last_" + k: v[-1] for k, v in get_training_log(subdir).items()}
-            hparams.append({'Path': subdir, **canonical_dict(subdir), **log_info})
+            log_info = {"logger.last_" + k: v[-1] for k, v in get_training_log(subdir).items()}
+            hparams_info = flatten_dict(get_hparams_dict(subdir))
+            rows.append({'Path': subdir, **hparams_info, **log_info})
 
     save_file = hparam_table(ckpt_root)
-    df = pd.DataFrame(hparams)
+    df = pd.DataFrame(rows)
     df.to_csv(save_file)
     print(f"Hparam table saved to {save_file}")
 
@@ -72,17 +84,6 @@ def make_hparam_table(ckpt_root):
 """
 Table summarizing experiment branches
 """
-def get_json_info(branch_dir):
-    json_info = {}
-    for file in branch_dir.glob("*.json"):
-        with open(file, 'r') as f:
-            json_contents = load(f)
-        for k, v in json_contents.items():
-            assert k not in json_info, k
-            json_info[k] = v
-    return json_info
-
-
 def make_branch_table(ckpt_root):
     info = []
     print(f"Summarizing branches for all experiments in {ckpt_root}")
@@ -94,7 +95,8 @@ def make_branch_table(ckpt_root):
                     for branch in level.glob("*"):
                         branch_info = {"experiment": str(experiment), "replicate": replicate.stem, "level": level.stem, "branch": branch.stem}
                         log_info = {k: v[-1] for k, v in get_training_log(branch).items()}
-                        json_info = get_json_info(branch)
+                        # assume hparams in json and not log file, will be picked up by get_json_info
+                        json_info = flatten_dict(get_json_info(branch))
                         info.append({**branch_info, **log_info, **json_info})
 
     save_file = branch_table(ckpt_root)

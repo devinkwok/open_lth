@@ -99,6 +99,33 @@ class Hparams(abc.ABC):
 
         return cls(**d)
 
+    def to_dict(self, include_defaults=True):
+        fs = {}
+        for f in fields(self):
+            if f.name.startswith('_'): continue
+            if f.default is MISSING or include_defaults or (getattr(self, f.name) != f.default):
+                value = getattr(self, f.name)
+                if value is not None:  # do not save None type
+                    if isinstance(value, Hparams):  # Nested hparams.
+                        value = value.to_dict(include_defaults=include_defaults)
+                    else:  # only allow json serializable types
+                        assert isinstance(value, int) or isinstance(value, float) or isinstance(value, bool) or isinstance(value, str), type(value)
+                    fs[f.name] = value
+        return fs
+
+    def equals(self, other_hparams: object) -> bool:
+        # do not use builtin method __eq__ because subclasses do not inherit
+        for f in fields(self):
+            if f.name.startswith('_'): continue
+            if f.default is MISSING or (getattr(self, f.name) != f.default):
+                if getattr(self, f.name) != getattr(other_hparams, f.name):
+                    return False
+        for f in fields(other_hparams):
+            if f.name.startswith('_'): continue
+            if f.default is MISSING or (getattr(self, f.name) != f.default):
+                if getattr(self, f.name) != getattr(other_hparams, f.name):
+                    return False
+        return True
 
     @property
     def display(self):
@@ -115,7 +142,6 @@ class Hparams(abc.ABC):
                 value = getattr(self, f.name)
                 if isinstance(value, str): value = "'" + value + "'"
                 if isinstance(value, Hparams): value = str(value)
-                if isinstance(value, Tuple): value = 'Tuple(' + ','.join(str(h) for h in value) + ')'
                 fs[f.name] = value
         elements = [f'{name}={fs[name]}' for name in sorted(fs.keys())]
         return 'Hparams(' + ', '.join(elements) + ')'
