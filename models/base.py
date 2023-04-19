@@ -19,13 +19,15 @@ class OutputAffineLayerNorm(torch.nn.Module):
         self.layernorm = torch.nn.LayerNorm(num_features)
 
     def forward(self, x):
-        original_shape = x.shape
-        if len(original_shape) > 2:  # permute from (batch, outputs, ...) to (..., batch, outputs) and flatten to (..., outputs)
-            idx = list(range(len(original_shape)))
-            x = x.permute(idx[2:] + idx[:2]).reshape(-1, original_shape[1])
-        x = self.layernorm(x)
-        if len(original_shape) > 2:  # permute dims back to (batch, outputs, ...)
-            x = x.reshape(original_shape[2:] + original_shape[:2]).permute(idx[-2:] + idx[:-2])
+        if len(x.shape) > 2:  # for conv layers, there are additional dims after output dim
+            x = torch.moveaxis(x, 1, -1)  # move output dim to end
+            original_shape = x.shape
+            x = x.reshape(-1, original_shape[-1])
+            x = self.layernorm(x)
+            x = x.reshape(original_shape)  # go back to original shape
+            x = torch.moveaxis(x, -1, 1)
+        else:
+            x = self.layernorm(x)
         return x
 
 
