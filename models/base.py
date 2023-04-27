@@ -110,18 +110,20 @@ class Model(torch.nn.Module, abc.ABC):
 
     @staticmethod
     def get_batchnorm(n_filters, batchnorm_type=None):
-        if batchnorm_type is None or batchnorm_type == "bn":
+        if batchnorm_type is None:
             return torch.nn.BatchNorm2d(n_filters)
         substrings = batchnorm_type.split("$")  #TODO temporary hack for layernorm
         batchnorm_type = substrings[0]
         layernorm_scaling = substrings[1] if len(substrings) > 1 else 1
+        if batchnorm_type == "bn":
+            return torch.nn.BatchNorm2d(n_filters)
         if batchnorm_type == "layernorm":
             return OutputAffineLayerNorm(n_filters, float(layernorm_scaling))
         if batchnorm_type == "linear":
             return torch.nn.Conv2d(n_filters, n_filters, kernel_size=1, bias=True)
         if batchnorm_type == "none-bias" or batchnorm_type == "none":
             return torch.nn.Identity(n_filters)
-        raise ValueError(f"Batchnorm type {batchnorm_type} must be None, 'layernorm', 'linear', 'none-bias', or 'none'.")
+        raise ValueError(f"Batchnorm type {batchnorm_type} must be None, 'bn', 'layernorm', 'linear', 'none-bias', or 'none'.")
 
     @staticmethod
     def use_conv_bias(batchnorm_type):
