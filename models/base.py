@@ -14,21 +14,40 @@ from platforms.platform import get_platform
 
 
 class OutputAffineLayerNorm(torch.nn.Module):
-    def __init__(self, num_features: int):
+    """IMPORTANT NOTE
+    This replicates [Ainsworth, Hayase, Srinivasa. Git re-basin: Merging models modulo permutation symmetries]
+    Specifically, mean and std are computed over the output channels only,
+    rather than also over image and input dimensions H, W, C.
+    """
+
+    def __init__(self, num_features: int, layernorm_scaling=1):
         super().__init__()
         self.layernorm = torch.nn.LayerNorm(num_features)
+        self.scaling = layernorm_scaling  #TODO temporary hack for layernorm
 
     def forward(self, x):
         if len(x.shape) > 2:  # for conv layers, there are additional dims after output dim
             x = torch.moveaxis(x, 1, -1)  # move output dim to end
             original_shape = x.shape
             x = x.reshape(-1, original_shape[-1])
-            x = self.layernorm(x)
+            x = self._custom_layernorm(x)
             x = x.reshape(original_shape)  # go back to original shape
             x = torch.moveaxis(x, -1, 1)
         else:
-            x = self.layernorm(x)
+            x = self._custom_layernorm(x)
         return x
+
+    def _custom_layernorm(self, x):
+        if self.scaling == 1:
+            return self.layernorm(x)
+        # TODO temporary hack for inference only: makes layernorm work with padded networks
+        std, padded_mean = torch.std_mean(x, dim=-1, unbiased=False)  # nn.LayerNorm uses biased variance calculation
+        # correct for extra zeros from padding, e.g. if padded 2x, then mean should be 2x
+        mean = (padded_mean * self.scaling).reshape(-1, 1)
+        var = self.scaling * (std**2 + (1 - self.scaling) * padded_mean**2).reshape(-1, 1)
+        # replicate layernorm
+        normalized = (x - mean) / torch.sqrt(var + self.layernorm.eps) * self.layernorm.weight + self.layernorm.bias
+        return normalized
 
 
 class Model(torch.nn.Module, abc.ABC):
@@ -93,8 +112,11 @@ class Model(torch.nn.Module, abc.ABC):
     def get_batchnorm(n_filters, batchnorm_type=None):
         if batchnorm_type is None or batchnorm_type == "bn":
             return torch.nn.BatchNorm2d(n_filters)
+        substrings = batchnorm_type.split("$")  #TODO temporary hack for layernorm
+        batchnorm_type = substrings[0]
+        layernorm_scaling = substrings[1] if len(substrings) > 1 else 1
         if batchnorm_type == "layernorm":
-            return OutputAffineLayerNorm(n_filters)
+            return OutputAffineLayerNorm(n_filters, float(layernorm_scaling))
         if batchnorm_type == "linear":
             return torch.nn.Conv2d(n_filters, n_filters, kernel_size=1, bias=True)
         if batchnorm_type == "none-bias" or batchnorm_type == "none":

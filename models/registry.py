@@ -15,7 +15,7 @@ from platforms.platform import get_platform
 registered_models = [mnist_lenet.Model, cifar_resnet.Model, cifar_vgg.Model, imagenet_resnet.Model, cifar_lenet.Model]
 
 
-def get(model_hparams: ModelHparams, outputs=None):
+def get(model_hparams: ModelHparams, outputs=None, layernorm_scaling=1):  #TODO temporary hack for layernorm
     """Get the model for the corresponding hyperparameters."""
 
     # Select the initializer.
@@ -40,7 +40,7 @@ def get(model_hparams: ModelHparams, outputs=None):
     for registered_model in registered_models:
         if registered_model.is_valid_model_name(model_hparams.model_name):
             model = registered_model.get_model_from_name(model_hparams.model_name,
-                        init_fn, outputs, model_hparams.batchnorm_replace)
+                        init_fn, outputs, model_hparams.batchnorm_replace + f"${layernorm_scaling}")  #TODO temporary hack for layernorm
             break
 
     if model is None:

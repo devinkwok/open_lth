@@ -41,6 +41,7 @@ def _find_path_in_exp(path: Path, name_to_find) -> Path:
 
 """
 Get objects
+NOTE: strictly for inference!
 """
 def get_hparams_dict(path: Path, branch_name="main") -> dict:
     try:  # prefer to load from .json
@@ -87,13 +88,16 @@ def get_dataset(dataset_hparams: DatasetHparams):
 def get_dataloader(dataset_hparams: DatasetHparams, n_examples=None, train=False, batch_size=None):
     dataset_hparams.do_not_augment = True
     dataset_hparams.subset_end = n_examples
-    # hparams.subset_stride = 1  #FIXME for some reason this is a str when loading from hparams file
     dataset_hparams.batch_size = n_examples if batch_size is None else batch_size
-    return dataset_registry.get(dataset_hparams, train=train)
+    dataloader = dataset_registry.get(dataset_hparams, train=train)
+    # subset_end doesn't apply to test set, so truncate the dataloader instead
+    if not train and n_examples is not None:
+        pass  #TODO
+    return dataloader
 
 
-def get_model(model_hparams: ModelHparams, outputs=None) -> torch.nn.Module:
-    model = model_registry.get(model_hparams, outputs=outputs)
+def get_model(model_hparams: ModelHparams, outputs=None, layernorm_scaling=1) -> torch.nn.Module:
+    model = model_registry.get(model_hparams, outputs=outputs, layernorm_scaling=layernorm_scaling)  #TODO temporary hack for layernorm
     return model.to(device=get_platform().torch_device)
 
 
@@ -104,10 +108,10 @@ def get_state_dict(ckpt: Path):
     return params
 
 
-def get_ckpt(ckpt: Path):
+def get_ckpt(ckpt: Path, layernorm_scaling=1):
     dataset_hparams = get_dataset_hparams(ckpt)
-    model_hparams = get_model_hparams(ckpt)
-    model = get_model(model_hparams, outputs=num_classes(dataset_hparams))
+    model_hparams = get_model_hparams(ckpt)  #TODO temporary hack for layernorm
+    model = get_model(model_hparams, outputs=num_classes(dataset_hparams), layernorm_scaling=layernorm_scaling)
     params = get_state_dict(ckpt)
     model.load_state_dict(params)
     return (model_hparams, dataset_hparams), model, params
