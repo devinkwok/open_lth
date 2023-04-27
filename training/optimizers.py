@@ -31,7 +31,7 @@ def get_optimizer(training_hparams: TrainingHparams, model: Model) -> torch.opti
     raise ValueError('No such optimizer: {}'.format(training_hparams.optimizer_name))
 
 
-def get_lr_schedule(training_hparams: TrainingHparams, optimizer: torch.optim.Optimizer, iterations_per_epoch: int):
+def get_lr_schedule(training_hparams: TrainingHparams, optimizer: torch.optim.Optimizer, iterations_per_epoch: int, warmup_from: Step=None):
     lambdas = [lambda it: 1.0]
 
     # Drop the learning rate according to gamma at the specified milestones.
@@ -42,10 +42,11 @@ def get_lr_schedule(training_hparams: TrainingHparams, optimizer: torch.optim.Op
                       for x in training_hparams.milestone_steps.split(',')]
         lambdas.append(lambda it: training_hparams.gamma ** bisect.bisect(milestones, it))
 
-    # Add linear learning rate warmup if specified.
+    # Add linear learning rate warmup if specified. Start warmup at warmup_from.
     if training_hparams.warmup_steps:
         warmup_iters = Step.from_str(training_hparams.warmup_steps, iterations_per_epoch).iteration
-        lambdas.append(lambda it: min(1.0, it / warmup_iters))
+        delay_iters = 0 if warmup_from is None else warmup_from.iteration
+        lambdas.append(lambda it: max(0., min(1.0, (it - delay_iters) / warmup_iters)))
 
     # Combine the lambdas.
     return torch.optim.lr_scheduler.LambdaLR(optimizer, lambda it: np.product([l(it) for l in lambdas]))
