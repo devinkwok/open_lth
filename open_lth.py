@@ -37,6 +37,8 @@ def main():
     parser.add_argument('--platform', default='local', help='The platform on which to run the job.')
     parser.add_argument('--display_output_location', action='store_true',
                         help='Display the output location for this job.')
+    parser.add_argument('--make_tables', action='store_true',
+                        help='Generate csv tables summarizing all experiments and branches.')
 
     # Get the platform arguments.
     platform_name = arg_utils.maybe_get_arg('platform') or 'local'
@@ -59,7 +61,8 @@ def main():
     platform.run_job(runner_registry.get(runner_name).create_from_args(args).run)
 
     # Summarize all experiments and branches.
-    make_tables()
+    if args.make_tables:
+        make_tables()
 
 
 if __name__ == '__main__':
