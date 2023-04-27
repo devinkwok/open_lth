@@ -9,6 +9,7 @@ from lottery.branch import randomly_reinitialize
 from lottery.branch import retrain
 from lottery.branch import transport_mask
 from lottery.branch import one_shot
+from lottery.branch import retrain_one_shot
 
 registered_branches = {
     'randomly_prune': randomly_prune.Branch,
@@ -16,6 +17,7 @@ registered_branches = {
     'retrain': retrain.Branch,
     'transport_mask': transport_mask.Branch,
     'one_shot': one_shot.Branch,
+    'retrain_one_shot': retrain_one_shot.Branch,
 }
 
 
