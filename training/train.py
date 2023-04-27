@@ -63,7 +63,8 @@ def train(
     model.to(get_platform().torch_device)
     optimizer = optimizers.get_optimizer(training_hparams, model)
     step_optimizer = optimizer
-    lr_schedule = optimizers.get_lr_schedule(training_hparams, optimizer, train_loader.iterations_per_epoch)
+    warmup_from = start_step if training_hparams.always_warmup else Step.zero(train_loader.iterations_per_epoch)
+    lr_schedule = optimizers.get_lr_schedule(training_hparams, optimizer, train_loader.iterations_per_epoch, warmup_from=warmup_from)
 
     # Adapt for FP16.
     if training_hparams.apex_fp16:
