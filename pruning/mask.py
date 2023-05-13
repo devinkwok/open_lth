@@ -9,6 +9,7 @@ import torch
 
 from foundations import paths
 from platforms.platform import get_platform
+from utils.tensor_utils import vectorize, unvectorize, shuffle_tensor, shuffle_state_dict
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -75,3 +76,31 @@ class Mask(dict):
     @property
     def density(self):
         return 1 - self.sparsity
+
+    def randomize(self, seed: int, strategy: str = 'layerwise'):
+        mask = Mask(self)
+        # Randomize while keeping the same layerwise proportions as the original mask.
+        if strategy == 'layerwise':
+            mask = Mask(shuffle_state_dict(mask, seed=seed))
+        # Randomize globally throughout all prunable layers.
+        elif strategy == 'global':
+            mask = Mask(unvectorize(shuffle_tensor(vectorize(mask), seed=seed), mask))
+        # Randomize evenly across all layers.
+        elif strategy == 'even':
+            sparsity = mask.sparsity
+            for i, k in enumerate(sorted(mask.keys())):
+                layer_mask = torch.where(torch.arange(mask[k].numel()) < torch.ceil(sparsity * mask[k].numel()),
+                                            torch.ones(mask[k].numel()), torch.zeros(mask[k].numel()))
+                mask[k] = shuffle_tensor(layer_mask, seed=seed+i).reshape(mask[k].shape)
+        # Identity.
+        elif strategy == 'identity':
+            pass
+        # Error.
+        else:
+            raise ValueError(f'Invalid strategy: {strategy}')
+        return mask
+
+    def reset(self, layers_to_ignore: str = ''):
+        if layers_to_ignore:
+            for k in layers_to_ignore.split(','): self[k] = torch.ones_like(self[k])
+        return self

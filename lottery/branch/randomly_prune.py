@@ -3,13 +3,10 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import torch
-
 from lottery.branch import base
 from pruning.mask import Mask
 from pruning.pruned_model import PrunedModel
 from training import train
-from utils.tensor_utils import vectorize, unvectorize, shuffle_tensor, shuffle_state_dict
 from utils.branch_utils import load_dense_model
 
 
@@ -18,30 +15,8 @@ class Branch(base.Branch):
                         layers_to_ignore: str = ''):
         # Randomize the mask.
         mask = Mask.load(self.level_root)
-
-        # Randomize while keeping the same layerwise proportions as the original mask.
-        if strategy == 'layerwise': mask = Mask(shuffle_state_dict(mask, seed=seed))
-
-        # Randomize globally throughout all prunable layers.
-        elif strategy == 'global': mask = Mask(unvectorize(shuffle_tensor(vectorize(mask), seed=seed), mask))
-
-        # Randomize evenly across all layers.
-        elif strategy == 'even':
-            sparsity = mask.sparsity
-            for i, k in sorted(mask.keys()):
-                layer_mask = torch.where(torch.arange(mask[k].size) < torch.ceil(sparsity * mask[k].size),
-                                         torch.ones_like(mask[k].size), torch.zeros_like(mask[k].size))
-                mask[k] = shuffle_tensor(layer_mask, seed=seed+i).reshape(mask[k].size)
-
-        # Identity.
-        elif strategy == 'identity': pass
-
-        # Error.
-        else: raise ValueError(f'Invalid strategy: {strategy}')
-
-        # Reset the masks of any layers that shouldn't be pruned.
-        if layers_to_ignore:
-            for k in layers_to_ignore.split(','): mask[k] = torch.ones_like(mask[k])
+        mask = mask.randomize(seed, strategy)
+        mask.reset(layers_to_ignore)
 
         # Save the new mask.
         mask.save(self.branch_root)

@@ -1,5 +1,6 @@
 from pathlib import Path
 from itertools import chain
+from copy import deepcopy
 import json
 import torch
 import numpy as np
@@ -8,8 +9,10 @@ from foundations.paths import hparams
 from platforms.platform import get_platform
 from foundations.hparams import ModelHparams, DatasetHparams
 from foundations.step import Step
-from models import registry as model_registry
-from datasets import registry as dataset_registry
+import models.registry
+import datasets.registry
+import pruning.registry
+from pruning.pruned_model import PrunedModel
 
 
 """
@@ -82,14 +85,14 @@ def get_model_hparams(path: Path) -> dict:
 
 
 def get_dataset(dataset_hparams: DatasetHparams):
-    return dataset_registry.registered_datasets[dataset_hparams.dataset_name].Dataset
+    return datasets.registry.registered_datasets[dataset_hparams.dataset_name].Dataset
 
 
 def get_dataloader(dataset_hparams: DatasetHparams, n_examples=None, train=False, batch_size=None):
     dataset_hparams.do_not_augment = True
     dataset_hparams.subset_end = n_examples
     dataset_hparams.batch_size = n_examples if batch_size is None else batch_size
-    dataloader = dataset_registry.get(dataset_hparams, train=train)
+    dataloader = datasets.registry.get(dataset_hparams, train=train)
     # subset_end doesn't apply to test set, so truncate the dataloader instead
     if not train and n_examples is not None:
         pass  #TODO
@@ -97,7 +100,7 @@ def get_dataloader(dataset_hparams: DatasetHparams, n_examples=None, train=False
 
 
 def get_model(model_hparams: ModelHparams, outputs=None, layernorm_scaling=1) -> torch.nn.Module:
-    model = model_registry.get(model_hparams, outputs=outputs, layernorm_scaling=layernorm_scaling)  #TODO temporary hack for layernorm
+    model = models.registry.get(model_hparams, outputs=outputs, layernorm_scaling=layernorm_scaling)  #TODO temporary hack for layernorm
     return model.to(device=get_platform().torch_device)
 
 
@@ -117,6 +120,25 @@ def get_ckpt(ckpt: Path, layernorm_scaling=1):
     return (model_hparams, dataset_hparams), model, params
 
 
+def one_shot_prune(model, fraction: float, type: str = 'sparse_global', randomize: str = 'identity', seed: int = 42, layers_to_ignore: str = '', pruning_hparams: dict={}):
+    # do pruning in cpu
+    dense_model = model.to(device="cpu")
+    hparams = pruning.registry.get_pruning_hparams(type)
+    hparams = hparams(**{
+        'pruning_strategy': type,
+        'pruning_fraction': fraction,
+        'pruning_layers_to_ignore': layers_to_ignore,
+        **pruning_hparams,
+        })
+    mask = pruning.registry.get(hparams)(dense_model)
+    mask = mask.randomize(seed, strategy=randomize)
+    mask.reset(layers_to_ignore)
+    # make a new copy
+    pruned_model = PrunedModel(deepcopy(dense_model), mask).model
+    # return model and masks separately
+    return pruned_model.to(device=get_platform().torch_device), mask
+
+
 """
 Information
 """
@@ -125,23 +147,23 @@ def get_device():
 
 
 def num_train_examples(dataset_hparams: DatasetHparams):
-    return dataset_registry.get_dataset(dataset_hparams).num_train_examples()
+    return datasets.registry.get_dataset(dataset_hparams).num_train_examples()
 
 
 def num_test_examples(dataset_hparams: DatasetHparams):
-    return dataset_registry.get_dataset(dataset_hparams).num_test_examples()
+    return datasets.registry.get_dataset(dataset_hparams).num_test_examples()
 
 
 def num_classes(dataset_hparams: DatasetHparams):
-    return dataset_registry.num_classes(dataset_hparams)
+    return datasets.registry.num_classes(dataset_hparams)
 
 
 def iterations_per_epoch(dataset_hparams: DatasetHparams):
-    return dataset_registry.iterations_per_epoch(dataset_hparams)
+    return datasets.registry.iterations_per_epoch(dataset_hparams)
 
 
 def get_train_test_split(dataset_hparams: DatasetHparams, train):
-    split = dataset_registry.get_train_test_split(dataset_hparams)
+    split = datasets.registry.get_train_test_split(dataset_hparams)
     if split is None:
         if train:
             return np.ones(num_train_examples(dataset_hparams), dtype=bool)
