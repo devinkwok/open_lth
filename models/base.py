@@ -42,6 +42,8 @@ class OutputAffineLayerNorm(torch.nn.Module):
             return self.layernorm(x)
         # TODO temporary hack for inference only: makes layernorm work with padded networks
         std, padded_mean = torch.std_mean(x, dim=-1, unbiased=False)  # nn.LayerNorm uses biased variance calculation
+        if self.scaling == 0:  # ignore mean and std if scaling = 0
+            return x * self.layernorm.weight + self.layernorm.bias
         # correct for extra zeros from padding, e.g. if padded 2x, then mean should be 2x
         mean = (padded_mean * self.scaling).reshape(-1, 1)
         var = self.scaling * (std**2 + (1 - self.scaling) * padded_mean**2).reshape(-1, 1)
