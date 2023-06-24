@@ -1,3 +1,5 @@
 __pycache__
 *.pyc
 .*/
+testing/TEST_DATA/*
+testing/TESTING/*

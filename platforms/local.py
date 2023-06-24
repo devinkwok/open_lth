@@ -13,15 +13,15 @@ class Platform(base.Platform):
 
     @property
     def root(self):
-        return Path(os.environ.get("HOME")) / 'scratch/open_lth_data/'
+        return Path(os.environ.get("OPEN_LTH_ROOT"))
 
     @property
     def dataset_root(self):
-        return Path(os.environ.get("SLURM_TMPDIR")) / 'data'
+        return Path(os.environ.get("OPEN_LTH_DATASETS"))
 
     @property
     def imagenet_root(self):
-        return Path(os.environ.get("SLURM_TMPDIR")) / 'data/imagenet'
+        return Path(os.environ.get("OPEN_LTH_DATASETS")) / 'imagenet'
 
     @property
     def download_data(self):

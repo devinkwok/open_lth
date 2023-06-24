@@ -71,10 +71,12 @@ def get(dataset_hparams: DatasetHparams, train: bool = True):
 
     if (train and dataset_hparams.subsample_fraction is not None) or (dataset_hparams.cv_fold is not None):
         # allow test set to be subsampled when cv_fold is set
-        examples_to_retain = np.round(len(dataset) * dataset_hparams.subsample_fraction).astype(int)
-        if (dataset_hparams.cv_fold + 1) * examples_to_retain > len(dataset):
-            raise ValueError(f'Not enough examples ({len(dataset)}) for cross validation fold {dataset_hparams.cv_fold} at subsampling fraction {dataset_hparams.subsample_fraction}.')
-        start = dataset_hparams.cv_fold * examples_to_retain
+        subsample_fraction = 1 if dataset_hparams.subsample_fraction is None else dataset_hparams.subsample_fraction
+        examples_to_retain = np.round(len(dataset) * subsample_fraction).astype(int)
+        cv_fold = 0 if dataset_hparams.cv_fold is None else dataset_hparams.cv_fold
+        if (cv_fold + 1) * examples_to_retain > len(dataset):
+            raise ValueError(f'Not enough examples ({len(dataset)}) for cross validation fold {cv_fold} at subsampling fraction {subsample_fraction}.')
+        start = cv_fold * examples_to_retain
         end = start + examples_to_retain
         examples_to_retain = np.random.RandomState(seed=seed+1).permutation(len(dataset))[start:end]
         dataset = Subset(dataset, examples_to_retain)
