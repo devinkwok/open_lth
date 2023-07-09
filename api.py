@@ -1,5 +1,6 @@
 from pathlib import Path
 from itertools import chain
+import json
 import torch
 import numpy as np
 
@@ -41,15 +42,25 @@ def _find_path_in_exp(path: Path, name_to_find) -> Path:
 """
 Get objects
 """
-def get_hparams_dict(path: Path) -> dict:
-    path = _find_path_in_exp(path, hparams("").name)
+def get_hparams_dict(path: Path, branch_name="main") -> dict:
+    try:  # prefer to load from .json
+        path = _find_path_in_exp(path, str(hparams(branch_name)))
+        with get_platform().open(path, 'r') as fp:
+            return json.load(fp)
+    except RuntimeError:  # deprecated: load hparams.log instead
+        path = _find_path_in_exp(path, str(Path(branch_name) / "hparams.log"))
+        return _parse_hparams_dict_from_log(path)
+
+# deprecated: for loading old hparams.log files (THIS DOES NOT HANDLE NESTED HPARAMS)
+def _parse_hparams_dict_from_log(path):
     with open(path, 'r') as f:
         hparam_lines = f.readlines()
     hparams_dict = {}
     for line in hparam_lines:
         line = line.strip()
         if line.endswith(" Hyperparameters"):
-            header = line[:-len(" Hyperparameters")]
+            # translate keys so they match .json: make lowercase, replace space with _ and shorten "hparams"
+            header = line.replace(" ", "_").replace("Hyperparameters", "hparams").lower()
             hparams_dict[header] = {}
         elif line.startswith("* "):
             k, v = line[len("* "):].split(" => ")
@@ -60,12 +71,12 @@ def get_hparams_dict(path: Path) -> dict:
 
 
 def get_dataset_hparams(path: Path) -> dict:
-    dataset_hparams = get_hparams_dict(path)["Dataset"]
+    dataset_hparams = get_hparams_dict(path)["dataset_hparams"]
     return DatasetHparams.create_from_dict(dataset_hparams)
 
 
 def get_model_hparams(path: Path) -> dict:
-    model_hparams = get_hparams_dict(path)["Model"]
+    model_hparams = get_hparams_dict(path)["model_hparams"]
     return ModelHparams.create_from_dict(model_hparams)
 
 
@@ -73,11 +84,11 @@ def get_dataset(dataset_hparams: DatasetHparams):
     return dataset_registry.registered_datasets[dataset_hparams.dataset_name].Dataset
 
 
-def get_dataloader(dataset_hparams: DatasetHparams, n_examples=None, train=False, batch_size=5000):
+def get_dataloader(dataset_hparams: DatasetHparams, n_examples=None, train=False, batch_size=None):
     dataset_hparams.do_not_augment = True
     dataset_hparams.subset_end = n_examples
     # hparams.subset_stride = 1  #FIXME for some reason this is a str when loading from hparams file
-    dataset_hparams.batch_size = batch_size if n_examples is None else n_examples
+    dataset_hparams.batch_size = n_examples if batch_size is None else batch_size
     return dataset_registry.get(dataset_hparams, train=train)
 
 
@@ -99,7 +110,7 @@ def get_ckpt(ckpt: Path):
     model = get_model(model_hparams, outputs=num_classes(dataset_hparams))
     params = get_state_dict(ckpt)
     model.load_state_dict(params)
-    return model_hparams, model, params
+    return (model_hparams, dataset_hparams), model, params
 
 
 """

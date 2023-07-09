@@ -22,12 +22,14 @@ class Platform(platforms.local.Platform):
         return False
 
     @property
-    def root(self):
-        return os.path.join(super(Platform, self).root, 'TESTING')
+    def download_data(self):
+        return True
 
 
 class TestCase(unittest.TestCase):
     def setUp(self):
+        os.environ["OPEN_LTH_ROOT"] = "./testing/TESTING/"
+        os.environ["OPEN_LTH_DATASETS"] = "./testing/TEST_DATA/"
         self.saved_platform = platforms.platform._PLATFORM
         platforms.platform._PLATFORM = Platform(num_workers=4)
         if os.path.exists(platforms.platform.get_platform().root):

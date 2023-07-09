@@ -5,9 +5,8 @@
 
 import numpy as np
 
-from datasets import base, registry
+from datasets import base, registry, cifar10
 from foundations import hparams
-from open_lth.datasets import cifar10
 from testing import test_case
 
 

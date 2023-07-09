@@ -30,7 +30,7 @@ class TestCifarVGG(test_case.TestCase):
         self.assertTrue(cifar_vgg.Model.is_valid_model_name('cifar_vgg_16'))
         self.assertTrue(cifar_vgg.Model.is_valid_model_name('cifar_vgg_19'))
 
-        self.assertFalse(cifar_vgg.Model.is_valid_model_name('cifar_vgg_16_2'))
+        self.assertTrue(cifar_vgg.Model.is_valid_model_name('cifar_vgg_16_64'))
 
     def test_vgg11(self):
         model = cifar_vgg.Model.get_model_from_name('cifar_vgg_11', initializers.kaiming_normal)

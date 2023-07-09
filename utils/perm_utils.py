@@ -8,9 +8,12 @@ from foundations.paths import perm
 def permute_state_dict(state_dict, perm_file):
     permutation_info = torch.load(perm_file)
     perm_dict = permutation_info["permutations"]
-    perm_to_axes = permutation_info["perm_to_axes"]
+    if "perm_to_axes" in permutation_info:
+        perm_to_axes = permutation_info["perm_to_axes"]
+    else:
+        perm_to_axes = permutation_info["group_to_axes"]
     for p, permutation in perm_dict.items():
-        for layer_name, dim in perm_to_axes[p]:
+        for layer_name, dim, *_ in perm_to_axes[p]:
             # not all layers have permutations (None), some layers will not be present in mask (e.g. biases)
             if permutation is not None and layer_name in state_dict:
                 assert state_dict[layer_name].shape[dim] == len(permutation), (state_dict[layer_name].shape, len(permutation))

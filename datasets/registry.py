@@ -63,21 +63,20 @@ def get(dataset_hparams: DatasetHparams, train: bool = True):
     if train and dataset_hparams.random_labels_fraction is not None:
         dataset.randomize_labels(seed=seed, fraction=dataset_hparams.random_labels_fraction)
 
-    if dataset_hparams.subset_start is not None or dataset_hparams.subset_stride != 1 or dataset_hparams.subset_end is not None:
+    if train and (dataset_hparams.subset_start is not None or dataset_hparams.subset_stride != 1 or dataset_hparams.subset_end is not None):
         # allow start,end,stride when cv_fold is set
         if dataset_hparams.subsample_fraction is not None and dataset_hparams.cv_fold is None:
             raise ValueError("Cannot have both subsample_fraction and subset_[start,end,stride]")
-        subset_start = 0 if dataset_hparams.subset_start is None else dataset_hparams.subset_start
-        subset_end = len(dataset) if dataset_hparams.subset_end is None else dataset_hparams.subset_end
-        subset_stride = 1 if dataset_hparams.subset_stride is None else dataset_hparams.subset_stride
-        dataset = Subset(dataset, np.arange(subset_start, subset_end, subset_stride))
+        dataset = Subset(dataset, _get_subset_idx(dataset_hparams))
 
     if (train and dataset_hparams.subsample_fraction is not None) or (dataset_hparams.cv_fold is not None):
         # allow test set to be subsampled when cv_fold is set
-        examples_to_retain = np.round(len(dataset) * dataset_hparams.subsample_fraction).astype(int)
-        if (dataset_hparams.cv_fold + 1) * examples_to_retain > len(dataset):
-            raise ValueError(f'Not enough examples ({len(dataset)}) for cross validation fold {dataset_hparams.cv_fold} at subsampling fraction {dataset_hparams.subsample_fraction}.')
-        start = dataset_hparams.cv_fold * examples_to_retain
+        subsample_fraction = 1 if dataset_hparams.subsample_fraction is None else dataset_hparams.subsample_fraction
+        examples_to_retain = np.round(len(dataset) * subsample_fraction).astype(int)
+        cv_fold = 0 if dataset_hparams.cv_fold is None else dataset_hparams.cv_fold
+        if (cv_fold + 1) * examples_to_retain > len(dataset):
+            raise ValueError(f'Not enough examples ({len(dataset)}) for cross validation fold {cv_fold} at subsampling fraction {subsample_fraction}.')
+        start = cv_fold * examples_to_retain
         end = start + examples_to_retain
         examples_to_retain = np.random.RandomState(seed=seed+1).permutation(len(dataset))[start:end]
         dataset = Subset(dataset, examples_to_retain)
@@ -100,6 +99,14 @@ def get(dataset_hparams: DatasetHparams, train: bool = True):
     return registered_datasets[dataset_hparams.dataset_name].DataLoader(
         dataset, batch_size=dataset_hparams.batch_size, num_workers=get_platform().num_workers)
 
+def _get_subset_idx(dataset_hparams: DatasetHparams):
+    num_train_examples = get_dataset(dataset_hparams).num_train_examples()
+    subset_start = 0 if dataset_hparams.subset_start is None else dataset_hparams.subset_start
+    subset_end = num_train_examples if dataset_hparams.subset_end is None else dataset_hparams.subset_end
+    subset_stride = 1 if dataset_hparams.subset_stride is None else dataset_hparams.subset_stride
+    assert subset_start >= 0 and subset_end <= num_train_examples and subset_start < subset_end  \
+        and subset_stride > 0 and subset_stride <= num_train_examples
+    return np.arange(subset_start, subset_end, subset_stride)
 
 def iterations_per_epoch(dataset_hparams: DatasetHparams):
     """Get the number of iterations per training epoch."""
@@ -111,6 +118,8 @@ def iterations_per_epoch(dataset_hparams: DatasetHparams):
 
     if dataset_hparams.subsample_fraction is not None:
         num_train_examples *= dataset_hparams.subsample_fraction
+    else:
+        num_train_examples = len(list(_get_subset_idx(dataset_hparams)))
 
     return np.ceil(num_train_examples / dataset_hparams.batch_size).astype(int)
 

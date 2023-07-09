@@ -21,7 +21,7 @@ def sparsity_report(root): return Path(root) / 'sparsity_report.json'
 def model(root, step): return Path(root) / 'model_ep{}_it{}.pth'.format(step.ep, step.it)
 
 
-def hparams(root): return Path(root) / 'hparams.log'
+def hparams(root): return Path(root) / 'hparams.json'
 
 
 def perm(root): return Path(root) / "perm_mask_source.json"

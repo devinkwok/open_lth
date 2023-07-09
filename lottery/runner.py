@@ -124,7 +124,7 @@ class LotteryRunner(Runner):
         if Mask.exists(new_location): return
 
         if level == 0:
-            Mask.ones_like(models.registry.get(self.desc.model_hparams)).save(new_location)
+            Mask.ones_like(models.registry.get(self.desc.model_hparams, outputs=self.desc.train_outputs)).save(new_location)
         else:
             old_location = self.desc.run_path(self.replicate, level-1)
             model = models.registry.load(old_location, self.desc.train_end_step,

@@ -66,7 +66,8 @@ This framework and its predecessors were developed in the course of conducting r
 
 1. Install the requirements.
 2. Clone this repository.
-3. Modify `platforms/local.py` so that it contains the paths where you want datasets and results to be stored. By default, they will be stored in `~/open_lth_data/` and `~/open_lth_datasets/`. To train with ImageNet, you will need to specify the path where ImageNet is stored.
+3. Modify `slurm-setup.sh` and include `source slurm-setup.sh [<DATASETS>]` in scripts as required.
+4. Alternatively, modify `platforms/local.py` so that it contains the paths where you want datasets and results to be stored. By default, open_lth will look at the locations specified by the environment variables `$OPEN_LTH_ROOT` and `$OPEN_LTH_DATASETS`. To train with ImageNet, you will need to specify the path where ImageNet is stored.
 
 ### 2.3 The Command-Line Interface
 
@@ -222,7 +223,7 @@ All experiments are automatically named according to their hyperparameters. Spec
 <root>/train_<hash>/replicate_<replicate>/main
 ```
 
-`<root>` is the data root directory stored in `platforms/local.py`; it defaults to `~/open_lth_data`.
+`<root>` is the data root directory stored in `platforms/local.py`; it defaults to `$OPEN_LTH_ROOT`.
 
 The results themselves are stored in a file called `logger`, which only appears after training is complete. This file is a lightweight CSV where each line is one piece of telemetry data about the model. A line consists of three comma-separated values: the name of the kind of telemetry (e.g., `test-accuracy`), the iteration of training at which the telemetry data was collected (e.g., `391`), and the value itself. You can parse this file manually, or use `training/metric_logger.py`, which is used by the framework to read and write these files.
 
@@ -232,6 +233,11 @@ To get the name of the output location for a particular run, use the `--display_
 python open_lth.py train --default_hparams=cifar_resnet_20 --display_output_location
 /home/jfrankle/open_lth_data/train_71bc92a970b64a76d7ab7681764b0021/replicate_1/main
 ```
+
+#### 2.8.1 Summarizing All Results
+
+Running `open_lth` with the argument `--make_tables` will collect all experiments and hyperparameters in `<root>/exp-hparams.csv`.
+All branches will be collected in `<root>/exp-branches.csv`, which also includes any information stored in `.json` files under each branch and the evaluation results in `logger`.
 
 ### 2.9 Checkpointing and Re-running
 
@@ -250,6 +256,11 @@ rather than
 </pre>
 
 If no replicate is specified, `--replicate` will default to 1.
+
+#### 2.9.1 Loading Checkpoints for Inference
+
+Use `from open_lth import api` to access helper functions for finding and loading hyperparameters, models, checkpoints, and datasets with a single import statement.
+Note this API is intended for inference only, and may be missing training-related functionality.
 
 ### 2.10 Modifying the Training Environment
 
@@ -278,7 +289,7 @@ This framework includes standard ResNet models for ImageNet and a standard data 
 
 1. Prepare the ImageNet dataset.
     1. Create two folders, `train`, and `val`, each of which has one subfolder for each class containing the JPEG images of the examples in that class.
-    2. Modify `imagenet_root()` in `platforms/local.py` to return this location.
+    2. Link `$OPEN_LTH_DATASETS/imagenet` to this location or modify `imagenet_root()` in `platforms/local.py` to return this location.
 2. If you wish to train with 16-bit precision, you will need to install the [NVIDIA Apex](https://anaconda.org/conda-forge/nvidia-apex) and add the `--apex_fp16` argument to the training command.
 
 ## <a name=internals></a>3 Internals
