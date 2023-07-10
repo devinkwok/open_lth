@@ -102,5 +102,12 @@ class Step:
         self._check(other)
         return self._iteration >= other._iteration
 
+    def __add__(self, other):
+        self._check(other)
+        return Step(self._iteration + other._iteration, self._iterations_per_epoch)
+
+    def __hash__(self):
+        return hash((self._iteration, self._iterations_per_epoch))
+
     def __str__(self):
         return '(Iteration {}; Iterations per Epoch: {})'.format(self._iteration, self._iterations_per_epoch)

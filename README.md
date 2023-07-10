@@ -365,7 +365,7 @@ Most importantly, it takes an argument called `callbacks`. This argument require
 
 Instead, the behavior of the loop is modified by providing _callback_ functions (known as _hooks_ in other frameworks). These callbacks are called before every training step and after the final training step. They are provided with the current training step, the model, the optimizer, the output location, and the logger, and they can perform functions like saving the model state, running the test set, checkpointing, printing useful debugging information, etc. As new functionality is needed in the training loop, simply create new callbacks.
 
-The file `training/standard_callbacks.py` contains a set of the most common callbacks you are likely to use, like evaluating the model on a `DataLoader` or saving the model state. It also contains a set of higher-order functions that modify a callback to run at a certain step or interval. Finally, it includes a set of standard callbacks for a training run:
+The file `training/callbacks/standard_callbacks.py` contains a set of the most common callbacks you are likely to use, like evaluating the model on a `DataLoader` or saving the model state. It also contains a set of higher-order functions that modify a callback to run at a certain step or interval. Finally, it includes a set of standard callbacks for a training run:
 * Save the network before and after training
 * Run the test set every epoch
 * Update the checkpoint every epoch

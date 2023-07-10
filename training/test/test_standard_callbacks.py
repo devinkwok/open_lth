@@ -10,7 +10,7 @@ import datasets.registry
 from foundations import paths
 from foundations.step import Step
 import models.registry
-from training import standard_callbacks
+from training.callbacks import standard_callbacks
 from training import train
 from training.metric_logger import MetricLogger
 from testing import test_case

@@ -5,6 +5,7 @@
 
 import time
 import torch
+from typing import Set
 
 from datasets.base import DataLoader
 from foundations import hparams
@@ -90,24 +91,41 @@ def create_eval_callback(eval_name: str, loader: DataLoader, verbose=False):
 
 # Callback frequencies. Each takes a callback as an argument and returns a new callback
 # that runs only at the specified frequency.
-def run_every_epoch(callback):
+def iter_str_to_steps(iters: str, iterations_per_epoch: int):
+    step_list = []
+    elements = iters.split(',')
+    for element in elements:
+        if len(element.split('-')) == 2:  # range of steps
+            start, end_skip = element.split('-')
+            start = Step.from_str(start, iterations_per_epoch)
+            if len(end_skip.split('@')) == 2:
+                end = Step.from_str(end_skip.split('@')[0], iterations_per_epoch)
+                skip = Step.from_str(end_skip.split('@')[1], iterations_per_epoch)
+            else:  # if not set, assume skip is every 1 epoch
+                end = Step.from_str(end_skip, iterations_per_epoch)
+                skip = Step.from_epoch(1, 0, iterations_per_epoch)
+            while start <= end:
+                step_list.append(start)
+                start = start + skip
+        else:  # single step
+            step_list.append(Step.from_str(element))
+    return set(step_list)
+
+
+def run_at_steps(steps: Set[Step], callback):
     def modified_callback(output_location, step, model, optimizer, logger):
-        if step.it != 0:
+        if step not in steps:
             return
         callback(output_location, step, model, optimizer, logger)
     return modified_callback
+
+
+def run_at_step(step1, callback):
+    return run_at_steps({step1}, callback)
 
 
 def run_every_step(callback):
     return callback
-
-
-def run_at_step(step1, callback):
-    def modified_callback(output_location, step, model, optimizer, logger):
-        if step != step1:
-            return
-        callback(output_location, step, model, optimizer, logger)
-    return modified_callback
 
 
 def run_every_n_epochs(callback, n, offset=0):
@@ -124,6 +142,10 @@ def run_every_n_steps(callback, n, offset=0):
             return
         callback(output_location, step, model, optimizer, logger)
     return modified_callback
+
+
+def run_every_epoch(callback):
+    return run_every_n_epochs(callback, n=1, offset=0)
 
 
 # The standard set of callbacks that should be used for a normal training run.
@@ -146,6 +168,11 @@ def standard_callbacks(training_hparams: hparams.TrainingHparams, train_set_load
     # Test every epoch if requested.
     if evaluate_every_epoch: result = [run_every_epoch(test_eval_callback)] + result
     elif verbose: result.append(run_every_epoch(create_timekeeper_callback()))
+
+    # Save model weights at arbitrary intervals
+    if training_hparams.save_ckpt_steps is not None:
+        steps = iter_str_to_steps(training_hparams.save_ckpt_steps, train_set_loader.iterations_per_epoch)
+        result.append(run_at_steps(steps, save_model))
 
     # Save model weights every N epochs if requested
     if training_hparams.save_every_n_epochs is not None:

@@ -225,6 +225,7 @@ class TrainingHparams(Hparams):
     apex_fp16: bool = False
     save_every_n_epochs: int = None
     save_every_n_steps: int = None
+    save_ckpt_steps: str = None
     always_warmup: bool = False
 
     _name: str = 'Training Hyperparameters'
@@ -243,6 +244,8 @@ class TrainingHparams(Hparams):
     _apex_fp16: bool = 'Whether to train the model in float16 using the NVIDIA Apex library.'
     _save_every_n_epochs: int = 'Save weights epN_it0 every time epoch N is divisible by this value (default None)'
     _save_every_n_steps: int = 'Save weights epN_itM every time epoch M is divisible by this value (default None)'
+    _save_ckpt_steps: str = 'Save weights at iterations of the form {X}ep[{Y}it] (if missing, it0 is assumed). \
+            Defined as comma-separated list of iterations or ranges `{start}-{stop inclusive}[@{skip}] e.g., 1ep,2ep-4ep9it@it3'
     _always_warmup: bool = 'Apply lr warmup even when starting training at a later iteration'
 
 

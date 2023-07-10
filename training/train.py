@@ -16,7 +16,7 @@ import models.registry
 from platforms.platform import get_platform
 from training.checkpointing import restore_checkpoint
 from training import optimizers
-from training import standard_callbacks
+from training.callbacks import standard_callbacks
 from training.metric_logger import MetricLogger
 
 try:
