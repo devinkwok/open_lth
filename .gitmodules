@@ -1,0 +1,3 @@
+[submodule "nn_example_difficulty"]
+	path = nn_example_difficulty
+	url = https://github.com/devinkwok/nn_example_difficulty

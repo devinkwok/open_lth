@@ -44,7 +44,7 @@ class TestStep(test_case.TestCase):
 
         self.assertStepEquals(Step.from_epoch(0, 0, 100), 0, 0, 0)
         self.assertStepEquals(Step.from_epoch(0, 50, 100), 50, 0, 50)
-        self.assertStepEquals(Step.from_epoch(1, 0, 100), 100, 1, 0)
+        self.assertStepEquals(Step.one_ep(100), 100, 1, 0)
         self.assertStepEquals(Step.from_epoch(1, 50, 100), 150, 1, 50)
         self.assertStepEquals(Step.from_epoch(100, 30, 100), 10030, 100, 30)
         self.assertStepEquals(Step.from_epoch(100, 1000, 100), 11000, 110, 0)

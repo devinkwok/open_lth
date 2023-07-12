@@ -57,6 +57,10 @@ class Step:
     def zero(iterations_per_epoch: int) -> 'Step':
         return Step(0, iterations_per_epoch)
 
+    @staticmethod
+    def one_ep(iterations_per_epoch: int) -> 'Step':
+        return Step.from_epoch(1, 0, iterations_per_epoch)
+
     @property
     def iteration(self):
         """The overall number of steps of training completed so far."""
