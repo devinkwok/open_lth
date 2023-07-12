@@ -4,6 +4,7 @@ from typing import Any
 from pathlib import Path
 
 from foundations.step import Step
+from platforms.platform import get_platform
 from training.metric_logger import MetricLogger
 
 
@@ -48,7 +49,7 @@ class CallbackSchedule:
                     step_list.append(start)
                     start = start + skip
             else:  # single step
-                step_list.append(Step.from_str(element))
+                step_list.append(Step.from_str(element, iterations_per_epoch))
         return set(step_list)
 
     def do_run(self, step):
@@ -71,13 +72,19 @@ class Callback:
         # get finished steps
         self.logger = MetricLogger()
         self.last_save_ep = -1
+        # load
+        if not get_platform().exists(self.save_root):
+            get_platform().makedirs(self.save_root)
         if self.log_file.exists():
-            self.logger = MetricLogger.create_from_file(self.log_file)
-            self.load(self.output_location)
+            self.logger = MetricLogger.create_from_file(self.log_file, default_filename=False)
+            self.load()
             self.update_last_save()
 
     @property
-    def log_file(self): return self.output_location / self.name()
+    def save_root(self): return self.output_location / self.name()
+
+    @property
+    def log_file(self): return self.save_root / "runs.log"
 
     @property
     def log_name(self): return "callback_finished"
@@ -93,41 +100,43 @@ class Callback:
                  for i, _ in self.logger.get_data(self.log_name)]
 
     def update_last_save(self):
-        self.last_save = max(self.logger).ep
-        self.logger.save(self.log_file)
+        steps = self.finished_steps
+        if len(steps) > 0:
+            self.last_save_ep = max(self.finished_steps).ep
+        self.logger.save(self.log_file, default_filename=False)
 
     def _callback_function(self, output_location, step, *args, **kwds) -> None:
         """The method that is called to execute the callback.
         """
-        assert self.output_location == output_location
+        assert self.output_location == Path(output_location), (self.output_location, output_location)
         # do not recompute metrics if already done
         if step not in self.finished_steps and self.schedule.do_run(step):
-            self.generate_metrics(step)
+            self.callback_function(output_location, step, *args, **kwds)
             self.logger.add(self.log_name, step, 1)
         # save metrics at same frequency as checkpoints, regardless of how many gen steps are run
         if self.last_save_ep < step.ep:
-            self._save_metrics(output_location)
+            self.save()
             self.update_last_save()
 
     def __call__(self, *args: Any, **kwds: Any) -> None:
         self._callback_function(*args, **kwds)
 
-    def callback_file(self, key: str): return f"{self.name()}_{key}"
+    def callback_file(self, key: str): return self.save_root / key
 
     # Interface that needs to be overridden for each callback.
     @abc.abstractmethod
-    def load(self, output_location):
+    def load(self):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def save(self, output_location): raise NotImplementedError
+    def save(self): raise NotImplementedError
 
     @abc.abstractmethod
     def callback_function(self, output_location, step, model, optimizer, logger, *args, **kwds):
         raise NotImplementedError
 
-    @abc.abstractmethod
-    def name(self) -> str: raise NotImplementedError
+    @abc.abstractstaticmethod
+    def name() -> str: raise NotImplementedError
 
     @abc.abstractstaticmethod
     def description() -> str: raise NotImplementedError

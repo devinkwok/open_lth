@@ -174,7 +174,7 @@ def standard_callbacks(output_location, dataset_hparams: hparams.DatasetHparams,
 
     if training_hparams.batch_forget_track:
         callback = BatchForgetCallback(
-            output_location, it_per_ep, dataset_hparams, verbose=verbose)
+            output_location, it_per_ep, training_hparams, dataset_hparams, verbose=verbose)
         result.append(callback)
 
     # Save model weights every N epochs if requested
