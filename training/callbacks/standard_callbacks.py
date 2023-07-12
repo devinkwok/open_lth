@@ -12,21 +12,24 @@ from foundations import hparams
 from foundations.step import Step
 from platforms.platform import get_platform
 from training import checkpointing
+from training.callbacks.base import CallbackSchedule
+from training.callbacks.pointwise_metrics import Callback as PointwiseMetricsCallback
+from training.callbacks.batch_forget import Callback as BatchForgetCallback
 
 
 # Standard callbacks.
-def save_model(output_location, step, model, optimizer, logger):
+def save_model(output_location, step, model, optimizer, logger, *args, **kwds):
     model.save(output_location, step)
 
 
-def save_logger(output_location, step, model, optimizer, logger):
+def save_logger(output_location, step, model, optimizer, logger, *args, **kwds):
     logger.save(output_location)
 
 
 def create_timekeeper_callback():
     time_of_last_call = None
 
-    def callback(output_location, step, model, optimizer, logger):
+    def callback(output_location, step, model, optimizer, logger, *args, **kwds):
         if get_platform().is_primary_process:
             nonlocal time_of_last_call
             t = 0.0 if time_of_last_call is None else time.time() - time_of_last_call
@@ -42,7 +45,7 @@ def create_eval_callback(eval_name: str, loader: DataLoader, verbose=False):
 
     time_of_last_call = None
 
-    def eval_callback(output_location, step, model, optimizer, logger):
+    def eval_callback(output_location, step, model, optimizer, logger, *args, **kwds):
         example_count = torch.tensor(0.0).to(get_platform().torch_device)
         total_loss = torch.tensor(0.0).to(get_platform().torch_device)
         total_correct = torch.tensor(0.0).to(get_platform().torch_device)
@@ -91,32 +94,11 @@ def create_eval_callback(eval_name: str, loader: DataLoader, verbose=False):
 
 # Callback frequencies. Each takes a callback as an argument and returns a new callback
 # that runs only at the specified frequency.
-def iter_str_to_steps(iters: str, iterations_per_epoch: int):
-    step_list = []
-    elements = iters.split(',')
-    for element in elements:
-        if len(element.split('-')) == 2:  # range of steps
-            start, end_skip = element.split('-')
-            start = Step.from_str(start, iterations_per_epoch)
-            if len(end_skip.split('@')) == 2:
-                end = Step.from_str(end_skip.split('@')[0], iterations_per_epoch)
-                skip = Step.from_str(end_skip.split('@')[1], iterations_per_epoch)
-            else:  # if not set, assume skip is every 1 epoch
-                end = Step.from_str(end_skip, iterations_per_epoch)
-                skip = Step.from_epoch(1, 0, iterations_per_epoch)
-            while start <= end:
-                step_list.append(start)
-                start = start + skip
-        else:  # single step
-            step_list.append(Step.from_str(element))
-    return set(step_list)
-
-
 def run_at_steps(steps: Set[Step], callback):
-    def modified_callback(output_location, step, model, optimizer, logger):
+    def modified_callback(output_location, step, *args, **kwds):
         if step not in steps:
             return
-        callback(output_location, step, model, optimizer, logger)
+        callback(output_location, step, *args, **kwds)
     return modified_callback
 
 
@@ -129,18 +111,18 @@ def run_every_step(callback):
 
 
 def run_every_n_epochs(callback, n, offset=0):
-    def modified_callback(output_location, step, model, optimizer, logger):
+    def modified_callback(output_location, step, *args, **kwds):
         if step.it != 0 or (step.ep - offset) % n != 0:
             return
-        callback(output_location, step, model, optimizer, logger)
+        callback(output_location, step, *args, **kwds)
     return modified_callback
 
 
 def run_every_n_steps(callback, n, offset=0):
-    def modified_callback(output_location, step, model, optimizer, logger):
+    def modified_callback(output_location, step, *args, **kwds):
         if (step.it - offset) % n != 0:
             return
-        callback(output_location, step, model, optimizer, logger)
+        callback(output_location, step, *args, **kwds)
     return modified_callback
 
 
@@ -149,11 +131,13 @@ def run_every_epoch(callback):
 
 
 # The standard set of callbacks that should be used for a normal training run.
-def standard_callbacks(training_hparams: hparams.TrainingHparams, train_set_loader: DataLoader,
+def standard_callbacks(output_location, dataset_hparams: hparams.DatasetHparams,
+                       training_hparams: hparams.TrainingHparams, train_set_loader: DataLoader,
                        test_set_loader: DataLoader, eval_on_train: bool = False, verbose: bool = True,
                        start_step: Step = None, evaluate_every_epoch: bool = True):
-    start = start_step or Step.zero(train_set_loader.iterations_per_epoch)
-    end = Step.from_str(training_hparams.training_steps, train_set_loader.iterations_per_epoch)
+    it_per_ep = train_set_loader.iterations_per_epoch
+    start = start_step or Step.zero(it_per_ep)
+    end = Step.from_str(training_hparams.training_steps, it_per_ep)
     test_eval_callback = create_eval_callback('test', test_set_loader, verbose=verbose)
     train_eval_callback = create_eval_callback('train', train_set_loader, verbose=verbose)
 
@@ -171,8 +155,27 @@ def standard_callbacks(training_hparams: hparams.TrainingHparams, train_set_load
 
     # Save model weights at arbitrary intervals
     if training_hparams.save_ckpt_steps is not None:
-        steps = iter_str_to_steps(training_hparams.save_ckpt_steps, train_set_loader.iterations_per_epoch)
-        result.append(run_at_steps(steps, save_model))
+        save_schedule = CallbackSchedule.from_str(training_hparams.save_ckpt_steps, it_per_ep)
+        result.append(run_at_steps(save_schedule.steps, save_model))
+
+    # Evaluate example difficulty metrics at arbitrary intervals
+    if training_hparams.pointwise_metrics_steps is not None:
+        eval_schedule = CallbackSchedule.from_str(training_hparams.pointwise_metrics_steps, it_per_ep)
+        if training_hparams.pointwise_metrics_n_train > 0:
+            callback = PointwiseMetricsCallback(
+                dataset_hparams, training_hparams.pointwise_metrics_n_train, True,
+                eval_schedule, output_location, it_per_ep, verbose)
+            result.append(callback)
+        if training_hparams.pointwise_metrics_n_test > 0:
+            callback = PointwiseMetricsCallback(
+                dataset_hparams, training_hparams.pointwise_metrics_n_test, False,
+                eval_schedule, output_location, it_per_ep, verbose)
+            result.append(callback)
+
+    if training_hparams.batch_forget_track:
+        callback = BatchForgetCallback(
+            output_location, it_per_ep, dataset_hparams, verbose=verbose)
+        result.append(callback)
 
     # Save model weights every N epochs if requested
     if training_hparams.save_every_n_epochs is not None:

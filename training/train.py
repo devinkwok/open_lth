@@ -18,6 +18,7 @@ from training.checkpointing import restore_checkpoint
 from training import optimizers
 from training.callbacks import standard_callbacks
 from training.metric_logger import MetricLogger
+from training.utils import batch_seed
 
 try:
     import apex
@@ -77,9 +78,6 @@ def train(
     elif get_platform().is_parallel:
         model = DataParallel(model)
 
-    # Get the random seed for the data order.
-    data_order_seed = training_hparams.data_order_seed
-
     # Restore the model from a saved checkpoint if the checkpoint exists.
     cp_step, cp_logger = restore_checkpoint(output_location, model, optimizer, train_loader.iterations_per_epoch)
     start_step = cp_step or start_step or Step.zero(train_loader.iterations_per_epoch)
@@ -96,16 +94,16 @@ def train(
     for ep in range(start_step.ep, end_step.ep + 1):
 
         # Ensure the data order is different for each epoch.
-        train_loader.shuffle(None if data_order_seed is None else (data_order_seed + ep))
+        train_loader.shuffle(batch_seed(training_hparams, ep))
 
         for it, (examples, labels) in enumerate(train_loader):
-
             # Advance the data loader until the start epoch and iteration.
             if ep == start_step.ep and it < start_step.it: continue
 
-            # Run the callbacks.
             step = Step.from_epoch(ep, it, train_loader.iterations_per_epoch)
-            for callback in callbacks: callback(output_location, step, model, optimizer, logger)
+
+            # Run the callbacks.
+            for callback in callbacks: callback(output_location, step, model, optimizer, logger, examples, labels)
 
             # Exit at the end step.
             if ep == end_step.ep and it == end_step.it: return
@@ -151,7 +149,7 @@ def standard_train(
 
     train_loader = datasets.registry.get(dataset_hparams, train=True)
     test_loader = datasets.registry.get(dataset_hparams, train=False)
-    callbacks = standard_callbacks.standard_callbacks(
+    callbacks = standard_callbacks.standard_callbacks(output_location, dataset_hparams,
         training_hparams, train_loader, test_loader, start_step=start_step,
         verbose=verbose, evaluate_every_epoch=evaluate_every_epoch)
     train(training_hparams, model, train_loader, output_location, callbacks, start_step=start_step)

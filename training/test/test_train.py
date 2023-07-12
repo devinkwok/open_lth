@@ -34,7 +34,7 @@ class TestTrain(test_case.TestCase):
         self.it = 0
         self.lr = 0.0
 
-        def callback(output_location, step, model, optimizer, logger):
+        def callback(output_location, step, model, optimizer, logger, *args, **kwds):
             self.step_counter += 1
             self.ep, self.it = step.ep, step.it
             self.lr = np.round(optimizer.param_groups[0]['lr'], 10)
@@ -75,7 +75,7 @@ class TestTrain(test_case.TestCase):
     def test_train_one_epoch(self):
         train.train(self.hparams.training_hparams, self.model, self.train_loader,
                     self.root, callbacks=[self.callback],
-                    end_step=Step.from_epoch(1, 0, len(self.train_loader)))
+                    end_step=Step.one_ep(len(self.train_loader)))
 
         self.assertEqual(self.step_counter, 13)  # Same as len(self.train_loader) + 1
         self.assertEqual(self.ep, 1)
@@ -230,7 +230,7 @@ class TestTrain(test_case.TestCase):
         # Train the model once and get the state.
         train.train(self.hparams.training_hparams, self.model, self.train_loader,
                     self.root, callbacks=[self.callback],
-                    start_step=Step.from_epoch(1, 0, len(self.train_loader)),
+                    start_step=Step.one_ep(len(self.train_loader)),
                     end_step=Step.from_epoch(1, 1, len(self.train_loader)))
         state1 = TestTrain.get_state(self.model)
 
@@ -238,7 +238,7 @@ class TestTrain(test_case.TestCase):
         self.model.load_state_dict(init)
         train.train(self.hparams.training_hparams, self.model, self.train_loader,
                     self.root, callbacks=[self.callback],
-                    start_step=Step.from_epoch(1, 0, len(self.train_loader)),
+                    start_step=Step.one_ep(len(self.train_loader)),
                     end_step=Step.from_epoch(1, 1, len(self.train_loader)))
         state2 = TestTrain.get_state(self.model)
 
@@ -254,7 +254,7 @@ class TestTrain(test_case.TestCase):
         # Train the model once and get the state.
         train.train(self.hparams.training_hparams, self.model, self.train_loader,
                     self.root, callbacks=[self.callback],
-                    start_step=Step.from_epoch(1, 0, len(self.train_loader)),
+                    start_step=Step.one_ep(len(self.train_loader)),
                     end_step=Step.from_epoch(1, 1, len(self.train_loader)))
         state1 = TestTrain.get_state(self.model)
 
@@ -262,7 +262,7 @@ class TestTrain(test_case.TestCase):
         self.model.load_state_dict(init)
         train.train(self.hparams.training_hparams, self.model, self.train_loader,
                     self.root, callbacks=[self.callback],
-                    start_step=Step.from_epoch(1, 0, len(self.train_loader)),
+                    start_step=Step.one_ep(len(self.train_loader)),
                     end_step=Step.from_epoch(1, 1, len(self.train_loader)))
         state2 = TestTrain.get_state(self.model)
 
@@ -276,7 +276,7 @@ class TestTrain(test_case.TestCase):
         # Train the model once and get the state.
         train.train(self.hparams.training_hparams, self.model, self.train_loader,
                     self.root, callbacks=[self.callback],
-                    start_step=Step.from_epoch(1, 0, len(self.train_loader)),
+                    start_step=Step.one_ep(len(self.train_loader)),
                     end_step=Step.from_epoch(1, 1, len(self.train_loader)))
         state1 = TestTrain.get_state(self.model)
 
@@ -302,7 +302,7 @@ class TestTrain(test_case.TestCase):
         # Train the model once and get the state.
         train.train(self.hparams.training_hparams, self.model, self.train_loader,
                     self.root, callbacks=[self.callback],
-                    start_step=Step.from_epoch(1, 0, len(self.train_loader)),
+                    start_step=Step.one_ep(len(self.train_loader)),
                     end_step=Step.from_epoch(1, 1, len(self.train_loader)))
         state1 = TestTrain.get_state(self.model)
 

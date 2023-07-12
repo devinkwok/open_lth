@@ -34,7 +34,7 @@ class TestStandardCallbacks(test_case.TestCase):
         self.hparams.training_hparams.training_steps = '3ep'
 
         # Get the callbacks.
-        self.callbacks = standard_callbacks.standard_callbacks(
+        self.callbacks = standard_callbacks.standard_callbacks(self.root, self.hparams.dataset_hparams,
             self.hparams.training_hparams, self.train_loader, self.test_loader,
             eval_on_train=True, verbose=False)
 
@@ -128,7 +128,7 @@ class TestStandardCallbacks(test_case.TestCase):
     def test_checkpointing(self):
         callback_step_count = 0
 
-        def callback(output_location, step, model, optimizer, logger):
+        def callback(output_location, step, model, optimizer, logger, *args, **kwds):
             nonlocal callback_step_count
             callback_step_count += 1
 

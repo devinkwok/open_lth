@@ -29,8 +29,9 @@ class MetricLogger:
         return logger
 
     @staticmethod
-    def create_from_file(filename):
-        with get_platform().open(paths.logger(filename)) as fp:
+    def create_from_file(filename, default_filename=True):
+        file = paths.logger(filename) if default_filename else filename
+        with get_platform().open(file) as fp:
             as_str = fp.read()
         return MetricLogger.create_from_string(as_str)
 

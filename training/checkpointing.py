@@ -11,7 +11,7 @@ from platforms.platform import get_platform
 from training.metric_logger import MetricLogger
 
 
-def save_checkpoint_callback(output_location, step, model, optimizer, logger):
+def save_checkpoint_callback(output_location, step, model, optimizer, logger, *args, **kwds):
     if get_platform().is_primary_process:
         get_platform().save_model({
             'ep': step.ep,
