@@ -24,13 +24,20 @@ class Callback(base.Callback):
         schedule: base.CallbackSchedule,
         output_location,
         iterations_per_epoch,
+        batch_size: int = None,
+        grad_batch_size: int = None,
+        use_functional_grad: bool = True,
         verbose: bool = True,
     ):
         # make copy to avoid changing original, do not augment
         data_hparams = deepcopy(data_hparams)
         data_hparams.do_not_augment = True
         data_hparams.subset_end = n_examples
-        self.dataloader = get_dataloader(data_hparams, n_examples=n_examples, train=train)
+        if grad_batch_size is None:
+            grad_batch_size = data_hparams.batch_size
+        self.dataloader = get_dataloader(data_hparams, n_examples=n_examples, train=train, batch_size=batch_size)
+        self.grad_dataloader = get_dataloader(data_hparams, n_examples=n_examples, train=train, batch_size=grad_batch_size)
+        self.use_functional_grad = use_functional_grad
         # identifier based on dataloader hparams, only 10 hash digits as it's unlikely to collide
         self.hash = hashlib.md5(str(data_hparams).encode('utf-8')).hexdigest()[:10] + ("train" if train else "test")
 
@@ -76,7 +83,7 @@ class Callback(base.Callback):
     def callback_function(self, output_location, step, model, optimizer, logger, *args, **kwds):
         metadata = {"iteration": step.iteration, "ep": step.ep, "it": step.it}
 
-        with base.ExecTime("Pointwise metrics", verbose=self.verbose):
+        with base.ExecTime(f"{self.name()} {self.hash()}", verbose=self.verbose):
             logits, labels, acc, loss = evaluate_model(
                 model, self.dataloader, device=get_device(),
                 loss_fn=nn.CrossEntropyLoss(reduction="none")
@@ -88,10 +95,10 @@ class Callback(base.Callback):
 
         with base.ExecTime("GraNd score", verbose=self.verbose):
             self.metrics["grand"].add(metrics.grand_score(
-                model, self.dataloader, device=get_device(), use_functional=False), **metadata)
+                model, self.grad_dataloader, device=get_device(), use_functional=self.use_functional_grad), **metadata)
 
         with base.ExecTime("VoG metric", verbose=self.verbose):
-            self.metrics["vog"].add(model, self.dataloader, **metadata)
+            self.metrics["vog"].add(model, self.grad_dataloader, **metadata)
 
     @staticmethod
     def pointwise_metrics(eval_logits, labels):
