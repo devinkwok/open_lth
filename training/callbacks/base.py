@@ -7,18 +7,42 @@ from foundations.step import Step
 from platforms.platform import get_platform
 from training.metric_logger import MetricLogger
 
+import time
 
-class ExecTime:
-    def __init__(self, message, verbose: bool = True) -> None:
-        self.message = message
-        self.verbose = verbose
+class Stopwatch:
+    def __init__(self, name="STOPWATCH"):
+        self.name = name
+        self.n_total = 0
+        self.total_time = 0
+        self.n_since_last_print = 0
+        self.time_since_last_print = 0
+        self.start_time = None
+        self.stop_time = None
 
-    def __enter__(self):
-        self.start = time()
+    def start(self):
+        self.n_total += 1
+        self.n_since_last_print += 1
+        self.start_time = time.time()
 
-    def __exit__(self, exc_type, exc_value, exc_tb):
-        if self.verbose:
-            print(f"{self.message} {(time() - self.start):0.4f} seconds")
+    def stop(self):
+        self.stop_time = time.time()
+        elapsed = self.stop_time - self.start_time
+        self.total_time += elapsed
+        self.time_since_last_print += elapsed
+
+    def print(self, message=""):
+        elapsed = 0
+        # if stop() hasn't been called, return current time minus start
+        if self.start_time is not None:
+            elapsed = time.time() - self.start_time
+            if self.stop_time is not None and self.stop_time > self.start_time:
+                elapsed = self.stop_time - self.start_time
+        if message != "":
+            message = " " + message
+        print(f"{self.name}{message}\telapsed {elapsed:0.2f}\tlast {self.time_since_last_print:0.2f} " +
+              f"({self.n_since_last_print})\ttotal {self.total_time:0.2f} ({self.n_total})")
+        self.n_since_last_print = 0
+        self.time_since_last_print = 0
 
 
 class CallbackSchedule:
@@ -83,15 +107,17 @@ class Callback:
             self.logger = MetricLogger.create_from_file(self.log_file, default_filename=False)
             self.load()
             self.update_last_save()
+        # time operations
+        self.stopwatch = Stopwatch(self.name())
 
     @property
     def save_root(self): return self.output_location / self.name()
 
     @property
-    def log_file(self): return self.save_root / "runs.log"
+    def log_file(self): return self.callback_file("runs.log")
 
     @property
-    def log_name(self): return "callback_finished"
+    def log_key(self): return "callback_finished"
 
     @property
     def level_root(self) -> str:
@@ -101,13 +127,7 @@ class Callback:
     @property
     def finished_steps(self):
         return [Step(i, self.iterations_per_epoch)
-                 for i, _ in self.logger.get_data(self.log_name)]
-
-    def update_last_save(self):
-        steps = self.finished_steps
-        if len(steps) > 0:
-            self.last_save_ep = max(self.finished_steps).ep
-        self.logger.save(self.log_file, default_filename=False)
+                 for i, _ in self.logger.get_data(self.log_key)]
 
     def _callback_function(self, output_location, step, *args, **kwds) -> None:
         """The method that is called to execute the callback.
@@ -115,14 +135,16 @@ class Callback:
         assert self.output_location == Path(output_location), (self.output_location, output_location)
         # do not recompute metrics if already done
         if step not in self.finished_steps and self.schedule.do_run(step):
-            if self.verbose:
-                print(f"{self.name()} {step.to_str()}")
+            if self.verbose: self.stopwatch.start()
             self.callback_function(output_location, step, *args, **kwds)
-            self.logger.add(self.log_name, step, 1)
+            self.logger.add(self.log_key, step, 1)
+            if self.verbose: self.stopwatch.stop()
         # save metrics at same frequency as checkpoints, regardless of how many gen steps are run
         if self.last_save_ep < step.ep:
+            if self.verbose: self.stopwatch.print()
             self.save_checkpoint()
-            self.update_last_save()
+            self.logger.save(self.log_file, default_filename=False)
+            self.last_save_ep = step.ep
 
     def __call__(self, *args: Any, **kwds: Any) -> None:
         self._callback_function(*args, **kwds)
@@ -132,7 +154,7 @@ class Callback:
         if len(key.suffix) == 0:  # no suffix, use default
             key = Path(key.name + default_suffix)
         if step is not None:  # insert step if set
-            key = f"{key.stem}_{step.to_str()}.{key.suffix}"
+            key = f"{key.stem}_{step.to_str()}{key.suffix}"
         return self.save_root / key
 
     # Interface that needs to be overridden for each callback.

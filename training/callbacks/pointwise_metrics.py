@@ -80,26 +80,23 @@ class Callback(base.Callback):
 
     def callback_function(self, output_location, step, model, optimizer, logger, *args, **kwds):
         metadata = {"iteration": step.iteration, "ep": step.ep, "it": step.it}
-
-        with base.ExecTime(f"VoG, loss", verbose=self.verbose):
-            self.other_metrics["classvog"].add(model, self.dataloader, **metadata)
-            _, logits = self.other_metrics["lossvog"].add(model, self.dataloader, return_output=True, **metadata)
-            # compute loss
-            labels = torch.cat([y for _, y in self.dataloader]).to(device=logits.device)
-            loss = self.loss_fn(logits, labels).detach().cpu().to(dtype=torch.float64)
-            self.other_metrics["avgloss"].add(loss, **metadata)
-            # save loss at every scheduled step
-            np.savez(self.callback_file("eploss", step), eploss=loss)
-
-        with base.ExecTime(f"pointwise, forget", verbose=self.verbose):
-            # update pointwise metrics
-            pointwise = metrics.pointwise_metrics(logits, labels)
-            acc = pointwise["acc"]
-            for k, v in pointwise.items():
-                self.pointwise_metrics[k].add(v, **metadata)
-            # update forget metrics
-            for v in self.forget_metrics.values():
-                v.add(acc, **metadata)
+        # update vog metrics
+        self.other_metrics["classvog"].add(model, self.dataloader, **metadata)
+        _, logits = self.other_metrics["lossvog"].add(model, self.dataloader, return_output=True, **metadata)
+        # compute loss
+        labels = torch.cat([y for _, y in self.dataloader]).to(device=logits.device)
+        loss = self.loss_fn(logits, labels).detach().cpu().to(dtype=torch.float64)
+        self.other_metrics["avgloss"].add(loss, **metadata)
+        # save loss at every scheduled step
+        np.savez(self.callback_file("eploss", step), eploss=loss)
+        # update pointwise metrics
+        pointwise = metrics.pointwise_metrics(logits, labels)
+        acc = pointwise["acc"]
+        for k, v in pointwise.items():
+            self.pointwise_metrics[k].add(v, **metadata)
+        # update forget metrics
+        for v in self.forget_metrics.values():
+            v.add(acc, **metadata)
 
         # save get() from online metrics if schedule is done
         if step == self.schedule.last_step:
@@ -108,7 +105,7 @@ class Callback(base.Callback):
     def save_final_values(self, step):
         for k, v in chain(self.pointwise_metrics.items(),
                             self.other_metrics.items()):
-            np.savez(self.callback_file(k, step), mean=v.mean.get().detach().cpu().numpy(), variance=v.get().detach().cpu().numpy())
+            np.savez(self.callback_file(k, step), mean=v.get_mean().detach().cpu().numpy(), variance=v.get().detach().cpu().numpy())
         for k, v in self.forget_metrics.items():
             np.savez(self.callback_file(k, step), value=v.get().detach().cpu().numpy())
 

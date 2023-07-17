@@ -1,7 +1,9 @@
 # callback for example difficulty metrics
 from typing import Any
 import torch
+import numpy as np
 
+from foundations.step import Step
 from foundations.hparams import TrainingHparams, DatasetHparams
 from training.callbacks import base
 from training.utils import batch_seed
@@ -24,6 +26,7 @@ class Callback(base.Callback):
                  verbose: bool = True
     ):
         self.train_hparams = train_hparams
+        self.last_step = Step.from_str(train_hparams.training_steps, iterations_per_epoch)
         if train_hparams.data_order_seed is None:
             raise ValueError("Must set TrainingHparams.data_order_seed")
         self.batch_size = data_hparams.batch_size
@@ -56,12 +59,14 @@ class Callback(base.Callback):
 
     def callback_function(self, output_location, step, model, optimizer, logger, examples, labels) -> Any:
         metadata = {"iteration": step.iteration, "ep": step.ep, "it": step.it}
-
-        with base.ExecTime("Batch forgetting", verbose=self.verbose):
-            minibatch_idx, batch, batch_metadata = self._get_minibatch_idx(step, labels)
-            _, _, minibatch_acc, _ = evaluate_model(model, batch, device=get_device(), return_accuracy=True)
-            for v in self.forget_metrics.values():
-                v.add(minibatch_acc, minibatch_idx=minibatch_idx, **metadata, **batch_metadata)
+        minibatch_idx, batch, batch_metadata = self._get_minibatch_idx(step, labels)
+        _, _, minibatch_acc, _ = evaluate_model(model, batch, device=get_device(), return_accuracy=True)
+        for v in self.forget_metrics.values():
+            v.add(minibatch_acc, minibatch_idx=minibatch_idx, **metadata, **batch_metadata)
+        # save get() from online metrics if schedule is done
+        if step == self.last_step:
+            for k, v in self.forget_metrics.items():
+                np.savez(self.callback_file(k, step), value=v.get().detach().cpu().numpy())
 
     def _get_minibatch_idx(self, step, labels):
         # get batch order

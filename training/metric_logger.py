@@ -2,6 +2,7 @@
 
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+from pathlib import Path
 
 from foundations import paths
 from foundations.step import Step
@@ -41,7 +42,7 @@ class MetricLogger:
         if not get_platform().is_primary_process: return
         if not get_platform().exists(location):
             get_platform().makedirs(location)
-        with get_platform().open(file, 'w') as fp:
+        with get_platform().open(Path(location) / file, 'w') as fp:
             fp.write(str(self))
 
     def get_data(self, desired_name):

@@ -50,16 +50,15 @@ class Callback(base.Callback):
         pass  # no state to save
 
     def callback_function(self, output_location, step, model, optimizer, logger, *args, **kwds):
-        with base.ExecTime(f"EL2N and GraNd", verbose=self.verbose):
-            # get GraNd score
-            grand, eval_logits = metrics.grand_score(model, self.dataloader, device=get_device(),
-                                use_functional=self.use_functional_grad, return_output=True)
-            np.savez(self.callback_file("grand", step), grand=grand.detach().cpu().numpy())
-            # get EL2N metric
-            prob = metrics.softmax(eval_logits.to(self.dtype))
-            labels = torch.cat([y for _, y in self.dataloader]).to(device=prob.device)
-            el2n = metrics.error_l2_norm(prob, labels)
-            np.savez(self.callback_file("el2n", step), el2n=el2n.detach().cpu().numpy())
+        # save GraNd score
+        grand, eval_logits = metrics.grand_score(model, self.dataloader, device=get_device(),
+                            use_functional=self.use_functional_grad, return_output=True)
+        np.savez(self.callback_file("grand", step), grand=grand.detach().cpu().numpy())
+        # save EL2N metric
+        prob = metrics.softmax(eval_logits.to(self.dtype))
+        labels = torch.cat([y for _, y in self.dataloader]).to(device=prob.device)
+        el2n = metrics.error_l2_norm(prob, labels)
+        np.savez(self.callback_file("el2n", step), el2n=el2n.detach().cpu().numpy())
 
     @staticmethod
     def name() -> str: return "gradmetrics"
