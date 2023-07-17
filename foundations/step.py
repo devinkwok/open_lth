@@ -53,6 +53,14 @@ class Step:
         else:
             raise ValueError('Malformed string step: {}'.format(s))
 
+    def to_str(self) -> str:
+        """Returns same string format that from_str ingests.
+
+        Returns:
+            str: of form '{}ep{}it'.format(ep, it)
+        """
+        return f"{self.ep}ep{self.it}it"
+
     @staticmethod
     def zero(iterations_per_epoch: int) -> 'Step':
         return Step(0, iterations_per_epoch)

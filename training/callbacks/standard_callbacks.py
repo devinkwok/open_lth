@@ -14,6 +14,7 @@ from platforms.platform import get_platform
 from training import checkpointing
 from training.callbacks.base import CallbackSchedule
 from training.callbacks.pointwise_metrics import Callback as PointwiseMetricsCallback
+from training.callbacks.grad_metrics import Callback as GradMetricsCallback
 from training.callbacks.batch_forget import Callback as BatchForgetCallback
 
 
@@ -159,22 +160,39 @@ def standard_callbacks(output_location, dataset_hparams: hparams.DatasetHparams,
         result.append(run_at_steps(save_schedule.steps, save_model))
 
     # Evaluate example difficulty metrics at arbitrary intervals
+
+    # pointwise metrics
     if training_hparams.pointwise_metrics_steps is not None:
         eval_schedule = CallbackSchedule.from_str(training_hparams.pointwise_metrics_steps, it_per_ep)
-        if training_hparams.pointwise_metrics_n_train > 0:
+        if training_hparams.metrics_n_train > 0:
             callback = PointwiseMetricsCallback(
-                dataset_hparams, training_hparams.pointwise_metrics_n_train, True,
+                dataset_hparams, training_hparams.metrics_n_train, True,
                 eval_schedule, output_location, it_per_ep, verbose=verbose)
             result.append(callback)
-        if training_hparams.pointwise_metrics_n_test > 0:
+        if training_hparams.metrics_n_test > 0:
             callback = PointwiseMetricsCallback(
-                dataset_hparams, training_hparams.pointwise_metrics_n_test, False,
+                dataset_hparams, training_hparams.metrics_n_test, False,
                 eval_schedule, output_location, it_per_ep, verbose=verbose)
             result.append(callback)
-
+    # grad metrics
+    if training_hparams.grad_metrics_steps is not None:
+        eval_schedule = CallbackSchedule.from_str(training_hparams.grad_metrics_steps, it_per_ep)
+        if training_hparams.metrics_n_train > 0:
+            callback = GradMetricsCallback(
+                    dataset_hparams, training_hparams.metrics_n_train, True, eval_schedule,
+                    output_location, it_per_ep, batch_size=training_hparams.grad_metrics_batch_size,
+                    use_functional_grad=True, verbose=verbose)
+            result.append(callback)
+        if training_hparams.metrics_n_test > 0:
+            callback = GradMetricsCallback(
+                    dataset_hparams, training_hparams.metrics_n_train, False, eval_schedule,
+                    output_location, it_per_ep, batch_size=training_hparams.grad_metrics_batch_size,
+                    use_functional_grad=True, verbose=verbose)
+            result.append(callback)
+    # batch forgetting metrics
     if training_hparams.batch_forget_track:
         callback = BatchForgetCallback(
-            output_location, it_per_ep, training_hparams, dataset_hparams, verbose=verbose)
+            output_location, it_per_ep, training_hparams, dataset_hparams, start_at_zero=True, verbose=verbose)
         result.append(callback)
 
     # Save model weights every N epochs if requested

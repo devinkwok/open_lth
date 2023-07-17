@@ -26,6 +26,10 @@ class CallbackSchedule:
     def __init__(self, steps=None) -> None:
         self.steps = steps
 
+    @property
+    def last_step(self):
+        return max(self.steps)
+
     @staticmethod
     def from_str(string, iterations_per_epoch):
         steps = CallbackSchedule.iter_str_to_steps(string, iterations_per_epoch)
@@ -111,17 +115,25 @@ class Callback:
         assert self.output_location == Path(output_location), (self.output_location, output_location)
         # do not recompute metrics if already done
         if step not in self.finished_steps and self.schedule.do_run(step):
+            if self.verbose:
+                print(f"{self.name()} {step.to_str()}")
             self.callback_function(output_location, step, *args, **kwds)
             self.logger.add(self.log_name, step, 1)
         # save metrics at same frequency as checkpoints, regardless of how many gen steps are run
         if self.last_save_ep < step.ep:
-            self.save()
+            self.save_checkpoint()
             self.update_last_save()
 
     def __call__(self, *args: Any, **kwds: Any) -> None:
         self._callback_function(*args, **kwds)
 
-    def callback_file(self, key: str): return self.save_root / key
+    def callback_file(self, key: str, step: Step=None, default_suffix=".npz"):
+        key = Path(key)
+        if len(key.suffix) == 0:  # no suffix, use default
+            key = Path(key.name + default_suffix)
+        if step is not None:  # insert step if set
+            key = f"{key.stem}_{step.to_str()}.{key.suffix}"
+        return self.save_root / key
 
     # Interface that needs to be overridden for each callback.
     @abc.abstractmethod
@@ -129,7 +141,7 @@ class Callback:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def save(self): raise NotImplementedError
+    def save_checkpoint(self): raise NotImplementedError
 
     @abc.abstractmethod
     def callback_function(self, output_location, step, model, optimizer, logger, *args, **kwds):

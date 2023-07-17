@@ -226,9 +226,11 @@ class TrainingHparams(Hparams):
     save_every_n_epochs: int = None
     save_every_n_steps: int = None
     save_ckpt_steps: str = None
+    metrics_n_train: int = 0
+    metrics_n_test: int = 0
     pointwise_metrics_steps: str = None
-    pointwise_metrics_n_train: int = 0
-    pointwise_metrics_n_test: int = 0
+    grad_metrics_steps: str = None
+    grad_metrics_batch_size: int = None
     batch_forget_track: bool = False
     always_warmup: bool = False
 
@@ -250,10 +252,13 @@ class TrainingHparams(Hparams):
     _save_every_n_steps: int = 'Save weights epN_itM every time epoch M is divisible by this value (default None)'
     _save_ckpt_steps: str = 'Save weights at iterations of the form {X}ep[{Y}it] (if missing, it0 is assumed). \
             Defined as comma-separated list of iterations or ranges `{start}-{stop inclusive}[@{skip}] e.g., 1ep,2ep-4ep9it@it3'
+    _metrics_n_train: str = 'Number of train examples to compute metrics on.'
+    _metrics_n_test: str = 'Number of test examples to compute metrics on.'
     _pointwise_metrics_steps: str = 'Evaluate difficulty metrics at iterations of the form {X}ep[{Y}it] (if missing, it0 is assumed). \
             Defined as comma-separated list of iterations or ranges `{start}-{stop inclusive}[@{skip}] e.g., 1ep,2ep-4ep9it@it3'
-    _pointwise_metrics_n_train: str = 'Number of train examples to compute metrics on.'
-    _pointwise_metrics_n_test: str = 'Number of test examples to compute metrics on.'
+    _grad_metrics_steps: str = 'Evaluate difficulty metrics at iterations of the form {X}ep[{Y}it] (if missing, it0 is assumed). \
+            Defined as comma-separated list of iterations or ranges `{start}-{stop inclusive}[@{skip}] e.g., 1ep,2ep-4ep9it@it3'
+    _grad_metrics_batch_size: str = 'Batch size for computing gradients (Jacobians), tune this to improve speed. Defaults to training batch size.'
     _batch_forget_track: str = 'Whether to track example forgetting metrics over training batches.'
     _always_warmup: bool = 'Apply lr warmup even when starting training at a later iteration'
 
