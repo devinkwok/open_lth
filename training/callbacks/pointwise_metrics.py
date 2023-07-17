@@ -24,13 +24,15 @@ class Callback(base.Callback):
         schedule: base.CallbackSchedule,
         output_location,
         iterations_per_epoch,
-        batch_size: int = None,  #TODO if None, uses single batch
+        batch_size: int = None,
         verbose: bool = True,
     ):
         # make copy to avoid changing original, do not augment
         data_hparams = deepcopy(data_hparams)
         data_hparams.do_not_augment = True
         data_hparams.subset_end = n_examples
+        if batch_size is None:
+            batch_size = data_hparams.batch_size
         self.dataloader = get_dataloader(data_hparams, n_examples=n_examples, train=train, batch_size=batch_size)
 
         # need to init Accumulator objects before super().__init__() calls load()

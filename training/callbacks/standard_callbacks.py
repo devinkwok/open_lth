@@ -167,12 +167,14 @@ def standard_callbacks(output_location, dataset_hparams: hparams.DatasetHparams,
         if training_hparams.metrics_n_train > 0:
             callback = PointwiseMetricsCallback(
                 dataset_hparams, training_hparams.metrics_n_train, True,
-                eval_schedule, output_location, it_per_ep, verbose=verbose)
+                eval_schedule, output_location, it_per_ep,
+                batch_size=training_hparams.pointwise_metrics_batch_size, verbose=verbose)
             result.append(callback)
         if training_hparams.metrics_n_test > 0:
             callback = PointwiseMetricsCallback(
                 dataset_hparams, training_hparams.metrics_n_test, False,
-                eval_schedule, output_location, it_per_ep, verbose=verbose)
+                eval_schedule, output_location, it_per_ep,
+                batch_size=training_hparams.pointwise_metrics_batch_size, verbose=verbose)
             result.append(callback)
     # grad metrics
     if training_hparams.grad_metrics_steps is not None:
