@@ -66,7 +66,7 @@ class Callback(base.Callback):
         # save get() from online metrics if schedule is done
         if step == self.last_step:
             for k, v in self.forget_metrics.items():
-                np.savez(self.callback_file(k, step), value=v.get().detach().cpu().numpy())
+                np.savez(self.callback_file(k, step), v.get().detach().cpu().numpy())
 
     def _get_minibatch_idx(self, step, labels):
         # get batch order

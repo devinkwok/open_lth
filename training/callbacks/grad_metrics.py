@@ -53,12 +53,12 @@ class Callback(base.Callback):
         # save GraNd score
         grand, eval_logits = metrics.grand_score(model, self.dataloader, device=get_device(),
                             use_functional=self.use_functional_grad, return_output=True)
-        np.savez(self.callback_file("grand", step), grand=grand.detach().cpu().numpy())
+        np.savez(self.callback_file("grand", step), grand.detach().cpu().numpy())
         # save EL2N metric
         prob = metrics.softmax(eval_logits.to(self.dtype))
         labels = torch.cat([y for _, y in self.dataloader]).to(device=prob.device)
         el2n = metrics.error_l2_norm(prob, labels)
-        np.savez(self.callback_file("el2n", step), el2n=el2n.detach().cpu().numpy())
+        np.savez(self.callback_file("el2n", step), el2n.detach().cpu().numpy())
 
     @staticmethod
     def name() -> str: return "gradmetrics"

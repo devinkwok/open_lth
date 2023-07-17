@@ -90,7 +90,7 @@ class Callback(base.Callback):
         loss = self.loss_fn(logits, labels).detach().cpu().to(dtype=torch.float64)
         self.other_metrics["avgloss"].add(loss, **metadata)
         # save loss at every scheduled step
-        np.savez(self.callback_file("eploss", step), eploss=loss)
+        np.savez(self.callback_file("loss", step), loss)
         # update pointwise metrics
         pointwise = metrics.pointwise_metrics(logits, labels)
         acc = pointwise["acc"]
@@ -109,7 +109,7 @@ class Callback(base.Callback):
                             self.other_metrics.items()):
             np.savez(self.callback_file(k, step), mean=v.get_mean().detach().cpu().numpy(), variance=v.get().detach().cpu().numpy())
         for k, v in self.forget_metrics.items():
-            np.savez(self.callback_file(k, step), value=v.get().detach().cpu().numpy())
+            np.savez(self.callback_file(k, step), v.get().detach().cpu().numpy())
 
 
     @staticmethod
