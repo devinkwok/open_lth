@@ -31,7 +31,7 @@ class CIFAR100(torchvision.datasets.CIFAR100):
 
 class Dataset(base.ImageDataset, base.NdarrayDataset):
     """CIFAR-100 dataset with 10 superclass labels."""
-    SUPERCOARSE_LABELS = ['aquatic_mammals-fish', 'flowers-fruit_and_vegetables', 'food_containers-people', 'household_electrical_devices-household_furniture', 'insects-non-insect_invertebrates', 'large_carnivores-large_omnivores_and_herbivores', 'large_man-made_outdoor_things-large_natural_outdoor_scenes', 'medium_mammals-small_mammals', 'reptiles-trees', 'vehicles_1-vehicles_2']
+    LABELS = ['aquatic_mammals-fish', 'flowers-fruit_and_vegetables', 'food_containers-people', 'household_electrical_devices-household_furniture', 'insects-non-insect_invertebrates', 'large_carnivores-large_omnivores_and_herbivores', 'large_man-made_outdoor_things-large_natural_outdoor_scenes', 'medium_mammals-small_mammals', 'reptiles-trees', 'vehicles_1-vehicles_2']
     COARSE_LABEL_MAP = [4, 1, 14, 8, 0, 6, 7, 7, 18, 3,
                             3, 14, 9, 18, 7, 11, 3, 9, 7, 11,
                             6, 11, 5, 10, 7, 6, 13, 15, 3, 15,

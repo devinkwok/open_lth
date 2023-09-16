@@ -32,6 +32,8 @@ class CIFAR10(torchvision.datasets.CIFAR10):
 class Dataset(base.ImageDataset, base.NdarrayDataset):
     """The CIFAR-10 dataset."""
 
+    LABELS = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
+
     @staticmethod
     def num_train_examples(): return 50000
 
