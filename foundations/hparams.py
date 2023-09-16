@@ -157,6 +157,7 @@ class DatasetHparams(Hparams):
     subset_start: int = None
     subset_end: int = None
     subset_stride: int = 1
+    subset_file: str = None
     random_labels_fraction: float = None
     unsupervised_labels: str = None
     blur_factor: int = None
@@ -177,6 +178,7 @@ class DatasetHparams(Hparams):
     _subset_start: str = 'If set, use a Subset with indices range(subset_start, subset_end, subset_stride)'
     _subset_end: str = 'If set, use a Subset with indices range(subset_start, subset_end, subset_stride)'
     _subset_stride: str = 'Stride of subset indices (default 1)'
+    _subset_file: str = 'If set, load data subset indices from numpy file at specified path. Overrides subset_start, subset_end, and subset_stride'
     _random_labels_fraction: str = 'Apply random labels to a fraction of the training set: float in (0, 1]'
     _unsupervised_labels: str = 'Replace the standard labels with alternative, unsupervised labels. Example: rotation'
     _blur_factor: str = 'Blur the training set by downsampling and then upsampling by this multiple.'

@@ -71,15 +71,24 @@ class Dataset(torch.utils.data.Dataset, abc.ABC):
         examples_to_randomize = np.random.RandomState(seed=seed+1).permutation(len(self._labels))[:num_to_randomize]
         self._labels[examples_to_randomize] = randomized_labels
 
-    def subsample(self, seed: int, fraction: float) -> None:
+    def subsample(self, seed: int, fraction: float=None, cv_fold=None) -> None:
         """Subsample the dataset."""
 
         if self._subsampled:
             raise ValueError('Cannot subsample more than once.')
         self._subsampled = True
 
-        examples_to_retain = np.ceil(len(self._labels) * fraction).astype(int)
-        examples_to_retain = np.random.RandomState(seed=seed+1).permutation(len(self._labels))[:examples_to_retain]
+        n_to_retain = np.ceil(len(self._labels) * fraction).astype(int)
+        fraction = 1 if fraction is None else fraction
+        cv_fold = 0 if cv_fold is None else cv_fold
+        if (cv_fold + 1) * n_to_retain > len(self._labels):
+            raise ValueError(f'Not enough examples ({len(self._labels)}) for cross validation fold {cv_fold} at subsampling fraction {fraction}.')
+        start = cv_fold * n_to_retain
+        end = start + n_to_retain
+        examples_to_retain = np.random.RandomState(seed=seed+1).permutation(len(self._labels))[start:end]
+        self.subset(examples_to_retain)
+
+    def subset(self, examples_to_retain):
         self._examples = self._examples[examples_to_retain]
         self._labels = self._labels[examples_to_retain]
 

@@ -45,6 +45,18 @@ class TestRegistry(test_case.TestCase):
         minibatch, labels = next(iter(loader))
         self.assertEqual(minibatch.numpy().shape[0], self.dataset_hparams.batch_size)
 
+    def test_get_subset(self):
+        _, all_labels = next(iter(registry.get(self.dataset_hparams, train=True)))
+        even_idx = np.arange(0, 50000, 2)
+        self.dataset_hparams.subset_file = "./testing/TESTING/test_get_subset.npy"
+        np.save(self.dataset_hparams.subset_file, even_idx)
+        loader = registry.get(self.dataset_hparams, train=True)
+        self.assertIsInstance(loader, base.DataLoader)
+        self.assertEqual(len(loader), 500)
+
+        _, labels = next(iter(loader))
+        np.testing.assert_array_equal(labels[:25], all_labels[np.arange(0, 50, 2)])
+
     def test_get_random_labels(self):
         self.dataset_hparams.transformation_seed = 0
         self.dataset_hparams.random_labels_fraction = 1.0

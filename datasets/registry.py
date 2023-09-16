@@ -4,7 +4,6 @@
 # LICENSE file in the root directory of this source tree.
 
 import numpy as np
-from torch.utils.data import Subset
 from datasets import base, cifar10, cifar10class5, cifar100, cifar100class20, cifar100class10, mnist, imagenet, svhn, eurosat, pixelpermutedcifar10
 from foundations.hparams import DatasetHparams
 from platforms.platform import get_platform
@@ -63,23 +62,18 @@ def get(dataset_hparams: DatasetHparams, train: bool = True):
     if train and dataset_hparams.random_labels_fraction is not None:
         dataset.randomize_labels(seed=seed, fraction=dataset_hparams.random_labels_fraction)
 
-    if train and (dataset_hparams.subset_start is not None or dataset_hparams.subset_stride != 1 or dataset_hparams.subset_end is not None):
+    # arbitrary subsample
+    if train and (dataset_hparams.subset_start is not None or dataset_hparams.subset_stride != 1  \
+                  or dataset_hparams.subset_end is not None or dataset_hparams.subset_file is not None):
         # allow start,end,stride when cv_fold is set
         if dataset_hparams.subsample_fraction is not None and dataset_hparams.cv_fold is None:
-            raise ValueError("Cannot have both subsample_fraction and subset_[start,end,stride]")
-        dataset = Subset(dataset, _get_subset_idx(dataset_hparams))
+            raise ValueError("Cannot have both subsample_fraction and subset_[start,end,stride,file]")
+        dataset.subset(_get_subset_idx(dataset_hparams))
 
+    # random subsample
     if (train and dataset_hparams.subsample_fraction is not None) or (dataset_hparams.cv_fold is not None):
         # allow test set to be subsampled when cv_fold is set
-        subsample_fraction = 1 if dataset_hparams.subsample_fraction is None else dataset_hparams.subsample_fraction
-        examples_to_retain = np.round(len(dataset) * subsample_fraction).astype(int)
-        cv_fold = 0 if dataset_hparams.cv_fold is None else dataset_hparams.cv_fold
-        if (cv_fold + 1) * examples_to_retain > len(dataset):
-            raise ValueError(f'Not enough examples ({len(dataset)}) for cross validation fold {cv_fold} at subsampling fraction {subsample_fraction}.')
-        start = cv_fold * examples_to_retain
-        end = start + examples_to_retain
-        examples_to_retain = np.random.RandomState(seed=seed+1).permutation(len(dataset))[start:end]
-        dataset = Subset(dataset, examples_to_retain)
+        dataset.subsample(seed, dataset_hparams.subsample_fraction, dataset_hparams.cv_fold)
 
     if train and dataset_hparams.blur_factor is not None:
         if not isinstance(dataset, base.ImageDataset):
@@ -101,6 +95,10 @@ def get(dataset_hparams: DatasetHparams, train: bool = True):
 
 def _get_subset_idx(dataset_hparams: DatasetHparams):
     num_train_examples = get_dataset(dataset_hparams).num_train_examples()
+    if dataset_hparams.subset_file is not None:
+        examples_to_retain = np.load(dataset_hparams.subset_file)
+        assert len(examples_to_retain.shape) < 2 and len(examples_to_retain) <= num_train_examples and np.min(examples_to_retain) >= 0 and np.max(examples_to_retain) < num_train_examples
+        return examples_to_retain
     subset_start = 0 if dataset_hparams.subset_start is None else dataset_hparams.subset_start
     subset_end = num_train_examples if dataset_hparams.subset_end is None else dataset_hparams.subset_end
     subset_stride = 1 if dataset_hparams.subset_stride is None else dataset_hparams.subset_stride
