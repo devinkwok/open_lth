@@ -11,17 +11,24 @@ from platforms import base
 
 class Platform(base.Platform):
 
+    @staticmethod
+    def _get_env_var(key):
+        env_var = os.environ.get(key)
+        if env_var is None:
+            raise ValueError(f"Environment variable {key} not set!")
+        return Path(env_var)
+
     @property
     def root(self):
-        return Path(os.environ.get("OPEN_LTH_ROOT"))
+        return self._get_env_var("OPEN_LTH_ROOT")
 
     @property
     def dataset_root(self):
-        return Path(os.environ.get("OPEN_LTH_DATASETS"))
+        return self._get_env_var("OPEN_LTH_DATASETS")
 
     @property
     def imagenet_root(self):
-        return Path(os.environ.get("OPEN_LTH_DATASETS")) / 'imagenet'
+        return self._get_env_var("OPEN_LTH_DATASETS") / 'imagenet'
 
     @property
     def download_data(self):

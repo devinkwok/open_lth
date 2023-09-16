@@ -89,8 +89,8 @@ class Hparams(abc.ABC):
             key = f'{field.name}' if prefix is None else f'{prefix}_{field.name}'
 
             if key in d:
-                # Cast to the appropriate type
-                if field.type in [bool, float, int]:
+                # Cast to the appropriate type unless None
+                if field.type in [bool, float, int] and d[key] is not None:
                     d[key] = field.type(d[key])
 
                 # Nested hparams.
