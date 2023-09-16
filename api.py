@@ -1,12 +1,13 @@
 from pathlib import Path
 from itertools import chain
+from typing import Union
 import json
 import torch
 import numpy as np
 
-from foundations.paths import hparams
+from foundations import paths, hparams
+from pruning import registry as pruning_registry
 from platforms.platform import get_platform
-from foundations.hparams import ModelHparams, DatasetHparams
 from foundations.step import Step
 from models import registry as model_registry
 from datasets import registry as dataset_registry
@@ -44,7 +45,7 @@ Get objects
 """
 def get_hparams_dict(path: Path, branch_name="main") -> dict:
     try:  # prefer to load from .json
-        path = _find_path_in_exp(path, str(hparams(branch_name)))
+        path = _find_path_in_exp(path, str(paths.hparams(branch_name)))
         with get_platform().open(path, 'r') as fp:
             return json.load(fp)
     except RuntimeError:  # deprecated: load hparams.log instead
@@ -69,29 +70,44 @@ def _parse_hparams_dict_from_log(path):
             raise ValueError(line)
     return hparams_dict
 
-
-def get_dataset_hparams(path: Path) -> dict:
-    dataset_hparams = get_hparams_dict(path)["dataset_hparams"]
-    return DatasetHparams.create_from_dict(dataset_hparams)
-
-
-def get_model_hparams(path: Path) -> dict:
-    model_hparams = get_hparams_dict(path)["model_hparams"]
-    return ModelHparams.create_from_dict(model_hparams)
+def _get_hparams_obj(path_or_dict, dict_key, Object, get_subclass_fn=None) -> hparams.Hparams:
+    if not isinstance(path_or_dict, dict):
+        path_or_dict = get_hparams_dict(path_or_dict)
+    hparams_dict = path_or_dict[dict_key]
+    if get_subclass_fn is not None:
+        Object = get_subclass_fn(hparams_dict)
+    return Object.create_from_dict(hparams_dict)
 
 
-def get_dataset(dataset_hparams: DatasetHparams):
+def get_dataset_hparams(path_or_dict: Union[Path, dict]) -> hparams.DatasetHparams:
+    return _get_hparams_obj(path_or_dict, "dataset_hparams", hparams.DatasetHparams)
+
+
+def get_model_hparams(path_or_dict: Union[Path, dict]) -> hparams.ModelHparams:
+    return _get_hparams_obj(path_or_dict, "model_hparams", hparams.ModelHparams)
+
+
+def get_training_hparams(path_or_dict: Union[Path, dict]) -> hparams.TrainingHparams:
+    return _get_hparams_obj(path_or_dict, "training_hparams", hparams.TrainingHparams)
+
+
+def get_pruning_hparams(path_or_dict: Union[Path, dict]) -> hparams.PruningHparams:
+    get_subclass_fn = lambda d: pruning_registry.get_pruning_hparams(d["pruning_strategy"])
+    return _get_hparams_obj(path_or_dict, "pruning_hparams", hparams.PruningHparams, get_subclass_fn=get_subclass_fn)
+
+
+def get_dataset(dataset_hparams: hparams.DatasetHparams):
     return dataset_registry.registered_datasets[dataset_hparams.dataset_name].Dataset
 
 
-def get_dataloader(dataset_hparams: DatasetHparams, n_examples=None, train=False, batch_size=None):
+def get_dataloader(dataset_hparams: hparams.DatasetHparams, n_examples=None, train=False, batch_size=None):
     dataset_hparams.do_not_augment = True
     dataset_hparams.subset_end = n_examples
     dataset_hparams.batch_size = n_examples if batch_size is None else batch_size
     return dataset_registry.get(dataset_hparams, train=train)
 
 
-def get_model(model_hparams: ModelHparams, outputs=None) -> torch.nn.Module:
+def get_model(model_hparams: hparams.ModelHparams, outputs=None) -> torch.nn.Module:
     model = model_registry.get(model_hparams, outputs=outputs)
     return model.to(device=get_platform().torch_device)
 
@@ -104,8 +120,9 @@ def get_state_dict(ckpt: Path):
 
 
 def get_ckpt(ckpt: Path):
-    dataset_hparams = get_dataset_hparams(ckpt)
-    model_hparams = get_model_hparams(ckpt)
+    hparams = get_hparams_dict(ckpt)
+    dataset_hparams = get_dataset_hparams(hparams)
+    model_hparams = get_model_hparams(hparams)
     model = get_model(model_hparams, outputs=num_classes(dataset_hparams))
     params = get_state_dict(ckpt)
     model.load_state_dict(params)
@@ -119,23 +136,23 @@ def get_device():
     return get_platform().device_str
 
 
-def num_train_examples(dataset_hparams: DatasetHparams):
+def num_train_examples(dataset_hparams: hparams.DatasetHparams):
     return dataset_registry.get_dataset(dataset_hparams).num_train_examples()
 
 
-def num_test_examples(dataset_hparams: DatasetHparams):
+def num_test_examples(dataset_hparams: hparams.DatasetHparams):
     return dataset_registry.get_dataset(dataset_hparams).num_test_examples()
 
 
-def num_classes(dataset_hparams: DatasetHparams):
+def num_classes(dataset_hparams: hparams.DatasetHparams):
     return dataset_registry.num_classes(dataset_hparams)
 
 
-def iterations_per_epoch(dataset_hparams: DatasetHparams):
+def iterations_per_epoch(dataset_hparams: hparams.DatasetHparams):
     return dataset_registry.iterations_per_epoch(dataset_hparams)
 
 
-def get_train_test_split(dataset_hparams: DatasetHparams, train):
+def get_train_test_split(dataset_hparams: hparams.DatasetHparams, train):
     split = dataset_registry.get_train_test_split(dataset_hparams)
     if split is None:
         if train:
