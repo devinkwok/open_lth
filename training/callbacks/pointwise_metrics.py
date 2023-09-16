@@ -105,10 +105,12 @@ class Callback(base.Callback):
             self.save_final_values(step)
 
     def save_final_values(self, step):
-        for k, v in chain(self.pointwise_metrics.items(),
-                            self.other_metrics.items()):
-            np.savez(self.callback_file(k, step), mean=v.get_mean().detach().cpu().numpy(), variance=v.get().detach().cpu().numpy())
-        for k, v in self.forget_metrics.items():
+        for k, v in self.pointwise_metrics.items():
+            np.savez(self.callback_file(k, step),
+                     mean=v.get_mean().detach().cpu().numpy(),
+                     variance=v.get().detach().cpu().numpy())
+        # per-pixel means aren't useful for variance of gradients
+        for k, v in chain(self.forget_metrics.items(), self.other_metrics.items()):
             np.savez(self.callback_file(k, step), v.get().detach().cpu().numpy())
 
 

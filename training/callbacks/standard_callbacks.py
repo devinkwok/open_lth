@@ -193,6 +193,7 @@ def standard_callbacks(output_location, dataset_hparams: hparams.DatasetHparams,
             result.append(callback)
     # batch forgetting metrics
     if training_hparams.batch_forget_track:
+        # note: this currently runs an extra batch in the last iteration as training loop runs callbacks first!
         callback = BatchForgetCallback(
             output_location, it_per_ep, training_hparams, dataset_hparams, start_at_zero=True, verbose=verbose)
         result.append(callback)
