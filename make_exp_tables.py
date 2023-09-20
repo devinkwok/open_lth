@@ -69,11 +69,13 @@ def make_hparam_table(ckpt_root):
     rows = []
     for subdir in ckpt_root.glob("*/"):
         if subdir.is_dir():
-            print(subdir)
             # save last items in log so that it is easy to check if an experiment was run
             log_info = {"logger.last_" + k: v[-1] for k, v in get_training_log(subdir).items()}
-            hparams_info = flatten_dict(get_hparams_dict(subdir))
-            rows.append({'Path': subdir, **hparams_info, **log_info})
+            try:
+                hparams_info = flatten_dict(get_hparams_dict(subdir))
+                rows.append({'Path': subdir, **hparams_info, **log_info})
+            except RuntimeError:
+                print(f"Error loading hparams: {subdir}")
 
     save_file = hparam_table(ckpt_root)
     df = pd.DataFrame(rows)
@@ -89,7 +91,6 @@ def make_branch_table(ckpt_root):
     print(f"Summarizing branches for all experiments in {ckpt_root}")
     for experiment in ckpt_root.glob("*/"):
         if experiment.is_dir():
-            print(experiment.stem)
             for replicate in experiment.glob("replicate_*"):
                 for level in replicate.glob("level_*"):
                     for branch in level.glob("*"):
@@ -97,7 +98,11 @@ def make_branch_table(ckpt_root):
                         log_info = {k: v[-1] for k, v in get_training_log(branch).items()}
                         # assume hparams in json and not log file, will be picked up by get_json_info
                         json_info = flatten_dict(get_json_info(branch))
-                        info.append({**branch_info, **log_info, **json_info})
+                        # only save if branch is not empty
+                        if len(log_info) == 0 and len(json_info) == 0:
+                            print(f"Empty branch: {branch}")
+                        else:
+                            info.append({**branch_info, **log_info, **json_info})
 
     save_file = branch_table(ckpt_root)
     df = pd.DataFrame(info)
