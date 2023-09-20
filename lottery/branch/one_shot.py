@@ -33,7 +33,7 @@ class Branch(base.Branch):
         else:
             raise ValueError(f'Invalid starting point {start_at}')
 
-        dense_model = load_dense_model(self, state_step)
+        dense_model = load_dense_model(self, state_step, self.level_root)
         # get one-shot magnitude pruning mask
         pruning_hparams = SparseGlobalPruningHparams(pruning_strategy="sparse_global",
                                                      pruning_fraction=pruning_fraction,

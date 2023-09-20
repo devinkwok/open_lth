@@ -54,7 +54,7 @@ class Branch(base.Branch):
             raise ValueError(f'Invalid starting point {start_at}')
 
         # Train the model with the new mask.
-        dense_model = load_dense_model(self, state_step)
+        dense_model = load_dense_model(self, state_step, self.level_root)
 
         # reinitialize mask at output layers
         if reinit_outputs:

@@ -60,7 +60,7 @@ class Branch(base.Branch):
             raise ValueError(f'Invalid starting point {start_at}')
 
         # Train the model with the new mask.
-        dense_model = load_dense_model(self, state_step)
+        dense_model = load_dense_model(self, state_step, self.level_root)
         model = PrunedModel(dense_model, mask)
         train.standard_train(model, self.branch_root, self.lottery_desc.dataset_hparams,
                              self.lottery_desc.training_hparams, start_step=start_step, verbose=self.verbose)

@@ -237,7 +237,7 @@ class ShuffleSampler(torch.utils.data.sampler.Sampler):
             indices = torch.randperm(self._num_examples).tolist()
         else:
             g = torch.Generator()
-            if self._seed is not None: g.manual_seed(self._seed)
+            g.manual_seed(self._seed)
             indices = torch.randperm(self._num_examples, generator=g).tolist()
 
         return iter(indices)

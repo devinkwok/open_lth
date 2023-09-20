@@ -41,7 +41,7 @@ class Branch(base.Branch):
 
         # Get the mask and model.
         mask = Mask.load(self.level_root)
-        dense_model = load_dense_model(self, state_step)
+        dense_model = load_dense_model(self, state_step, self.level_root)
 
         # reinitialize output layers of state_dict and mask
         if reinit_outputs:

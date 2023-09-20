@@ -43,7 +43,7 @@ class Branch(base.Branch):
         if datasets.registry.iterations_per_epoch(retrain_d) != datasets.registry.iterations_per_epoch(self.lottery_desc.dataset_hparams):
             start_step = Step.from_epoch(start_step.ep, 0, datasets.registry.iterations_per_epoch(retrain_d))
 
-        dense_model = load_dense_model(self, state_step)
+        dense_model = load_dense_model(self, state_step, self.level_root)
         # get one-shot magnitude pruning mask
         pruning_hparams = SparseGlobalPruningHparams(pruning_strategy="sparse_global",
                                                      pruning_fraction=pruning_fraction,

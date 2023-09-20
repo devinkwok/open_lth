@@ -1,9 +1,13 @@
 import models.registry
 
 
-def load_dense_model(branch, state_step):
-    pretrain_root = branch.lottery_desc.run_path(branch.replicate, "pretrain")
-    return models.registry.load(pretrain_root, state_step, branch.lottery_desc.model_hparams, outputs=branch.lottery_desc.train_outputs)
+def load_dense_model(branch, state_step, level_root):
+    # check current level first
+    try:
+        return models.registry.load(level_root, state_step, branch.lottery_desc.model_hparams, outputs=branch.lottery_desc.train_outputs)
+    except:  # if checkpoint isn't there, check level_pretrain
+        pretrain_root = branch.lottery_desc.run_path(branch.replicate, "pretrain")
+        return models.registry.load(pretrain_root, state_step, branch.lottery_desc.model_hparams, outputs=branch.lottery_desc.train_outputs)
 
 
 def get_output_layers(branch):
