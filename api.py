@@ -28,7 +28,8 @@ def _first_match_from_root(root: Path, name_to_find: str) -> Path:
 def _get_exp_root(path: Path) -> Path:
     # find experiment parent directory of file
     for parent in chain([path], path.parents):
-        if parent.stem.startswith("train_") or parent.stem.startswith("lottery_"):
+        if parent.stem.startswith("train_") or parent.stem.startswith("lottery_")  \
+            and not parent.stem.startswith("lottery_branch_"):  # do not return branch
             return parent
     raise RuntimeError(f"Experiment directory containing {path} not found.")
 
