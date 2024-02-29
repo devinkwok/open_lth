@@ -105,8 +105,10 @@ class Callback:
             get_platform().makedirs(self.save_root)
         if self.log_file.exists():
             self.logger = MetricLogger.create_from_file(self.log_file, default_filename=False)
-            self.load()
-            self.update_last_save()
+            log_results = self.logger.get_data(self.log_key)
+            if len(log_results) > 0:
+                self.last_save_ep = Step(log_results[-1][0], self.iterations_per_epoch).ep
+                self.load()
         # time operations
         self.stopwatch = Stopwatch(self.name())
 

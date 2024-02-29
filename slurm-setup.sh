@@ -33,6 +33,6 @@ do
     fi
 done
 
-# set environment variables for open_lth/paltforms/local.py
+# set environment variables for open_lth/platforms/local.py
 export OPEN_LTH_ROOT="$HOME/scratch/open_lth_data/"
 export OPEN_LTH_DATASETS="$SLURM_TMPDIR/data/"

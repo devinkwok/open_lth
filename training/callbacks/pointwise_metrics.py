@@ -8,7 +8,7 @@ import torch.nn as nn
 
 from foundations.hparams import DatasetHparams
 from platforms.platform import get_platform
-from training.callbacks import base 
+from training.callbacks import base
 from api import get_device, get_dataloader
 
 import sys
