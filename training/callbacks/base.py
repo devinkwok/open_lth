@@ -128,7 +128,7 @@ class Callback:
 
     @property
     def finished_steps(self):
-        return [Step(i, self.iterations_per_epoch)
+        return [Step(int(i), self.iterations_per_epoch)
                  for i, _ in self.logger.get_data(self.log_key)]
 
     def _callback_function(self, output_location, step, *args, **kwds) -> None:

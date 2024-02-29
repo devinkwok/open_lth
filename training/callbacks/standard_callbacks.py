@@ -187,7 +187,7 @@ def standard_callbacks(output_location, dataset_hparams: hparams.DatasetHparams,
             result.append(callback)
         if training_hparams.metrics_n_test > 0:
             callback = GradMetricsCallback(
-                    dataset_hparams, training_hparams.metrics_n_train, False, eval_schedule,
+                    dataset_hparams, training_hparams.metrics_n_test, False, eval_schedule,
                     output_location, it_per_ep, batch_size=training_hparams.grad_metrics_batch_size,
                     use_functional_grad=True, verbose=verbose)
             result.append(callback)

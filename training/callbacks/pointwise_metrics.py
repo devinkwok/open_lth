@@ -63,7 +63,7 @@ class Callback(base.Callback):
                 raise RuntimeError(f"Unable to load {file}")
             output[name] = obj.load(file)
             # check that saved iterations are same as self.finished_steps
-            it = set(output[name].get_metadata_lists("iteration"))
+            it = set(output[name].get_metadata_list("iteration"))
             if it != finished_it:
                 union_over_intersection = (finished_it.union(it)).difference(finished_it.intersection(it))
                 raise RuntimeError(f"Finished steps differ between {file} and {self.log_file}: {union_over_intersection}")
