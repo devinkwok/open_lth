@@ -206,7 +206,11 @@ def find_ckpt_by_it(replicate_dir: Path, ep_it: str, branch="main", levels=["lev
     ep, it = _ckpt_name_to_ep_it(ep_it)
     step = Step.from_epoch(ep, it, it_per_ep)
     for level in levels:
-        for i, ckpt in zip(*list_checkpoints(replicate_dir / level / branch)):
-            if step == i:
-                return ckpt
+        try:
+            steps, ckpt_names = list_checkpoints(replicate_dir / level / branch)
+            for i, ckpt in zip(steps, ckpt_names):
+                if step == i:
+                    return ckpt
+        except ValueError:  # level doesn't exist
+            continue
     raise ValueError(f"Cannot find checkpoint {ep_it} in {replicate_dir}, branch {branch}, levels {levels}")
