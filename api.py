@@ -44,7 +44,8 @@ def _find_path_in_exp(path: Path, name_to_find) -> Path:
 """
 Get objects
 """
-def get_hparams_dict(path: Path, branch_name="main") -> dict:
+def get_hparams_dict(path: Union[Path, str], branch_name="main") -> dict:
+    path = Path(path)
     try:  # prefer to load from .json
         path = _find_path_in_exp(path, str(paths.hparams(branch_name)))
         with get_platform().open(path, 'r') as fp:
@@ -80,19 +81,19 @@ def _get_hparams_obj(path_or_dict, dict_key, Object, get_subclass_fn=None) -> hp
     return Object.create_from_dict(hparams_dict)
 
 
-def get_dataset_hparams(path_or_dict: Union[Path, dict]) -> hparams.DatasetHparams:
+def get_dataset_hparams(path_or_dict: Union[Path, str, dict]) -> hparams.DatasetHparams:
     return _get_hparams_obj(path_or_dict, "dataset_hparams", hparams.DatasetHparams)
 
 
-def get_model_hparams(path_or_dict: Union[Path, dict]) -> hparams.ModelHparams:
+def get_model_hparams(path_or_dict: Union[Path, str, dict]) -> hparams.ModelHparams:
     return _get_hparams_obj(path_or_dict, "model_hparams", hparams.ModelHparams)
 
 
-def get_training_hparams(path_or_dict: Union[Path, dict]) -> hparams.TrainingHparams:
+def get_training_hparams(path_or_dict: Union[Path, str, dict]) -> hparams.TrainingHparams:
     return _get_hparams_obj(path_or_dict, "training_hparams", hparams.TrainingHparams)
 
 
-def get_pruning_hparams(path_or_dict: Union[Path, dict]) -> hparams.PruningHparams:
+def get_pruning_hparams(path_or_dict: Union[Path, str, dict]) -> hparams.PruningHparams:
     get_subclass_fn = lambda d: pruning_registry.get_pruning_hparams(d["pruning_strategy"])
     return _get_hparams_obj(path_or_dict, "pruning_hparams", hparams.PruningHparams, get_subclass_fn=get_subclass_fn)
 
@@ -113,14 +114,14 @@ def get_model(model_hparams: hparams.ModelHparams, outputs=None) -> torch.nn.Mod
     return model.to(device=get_platform().torch_device)
 
 
-def get_state_dict(ckpt: Path):
-    params = torch.load(ckpt, map_location=get_platform().torch_device)
+def get_state_dict(ckpt: Union[Path, str]):
+    params = torch.load(Path(ckpt), map_location=get_platform().torch_device)
     if "model_state_dict" in params:  # ckpt includes optimizer info
         params = params["model_state_dict"]
     return params
 
 
-def get_ckpt(ckpt: Path):
+def get_ckpt(ckpt: Union[Path, str]):
     hparams = get_hparams_dict(ckpt)
     dataset_hparams = get_dataset_hparams(hparams)
     model_hparams = get_model_hparams(hparams)
@@ -180,7 +181,8 @@ def _ckpt_name_to_ep_it(name: str):
     return ep, it
 
 
-def list_checkpoints(ckpt_dir: Path):
+def list_checkpoints(ckpt_dir: Union[Path, str]):
+    ckpt_dir = Path(ckpt_dir)
     if not ckpt_dir.exists():
         raise ValueError(f"Training checkpoint dir not available: {ckpt_dir}")
     it_per_ep = iterations_per_epoch(get_dataset_hparams(ckpt_dir))
@@ -196,12 +198,13 @@ def list_checkpoints(ckpt_dir: Path):
     return list(zip(*ckpts))  # return as separate lists (steps, filenames)
 
 
-def get_last_checkpoint(ckpt_dir: Path):
+def get_last_checkpoint(ckpt_dir: Union[Path, str]):
     steps, ckpts = list_checkpoints(ckpt_dir)
     return steps[-1], ckpts[-1]
 
 
-def find_ckpt_by_it(replicate_dir: Path, ep_it: str, branch="main", levels=["level_pretrain", "level_0"]):
+def find_ckpt_by_it(replicate_dir: Union[Path, str], ep_it: str, branch="main", levels=["level_pretrain", "level_0"]):
+    replicate_dir = Path(replicate_dir)
     it_per_ep = iterations_per_epoch(get_dataset_hparams(replicate_dir))
     ep, it = _ckpt_name_to_ep_it(ep_it)
     step = Step.from_epoch(ep, it, it_per_ep)
