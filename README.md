@@ -234,6 +234,32 @@ python open_lth.py train --default_hparams=cifar_resnet_20 --display_output_loca
 /home/jfrankle/open_lth_data/train_71bc92a970b64a76d7ab7681764b0021/replicate_1/main
 ```
 
+An example of the directory structure for open_lth datasets and outputs:
+```
+{datasets}            # specified by environment variable $OPEN_LTH_DATASETS
+  cifar10             # each dataset is in subdir with same name
+  ...
+{open_lth_data}       # where outputs are saved, specified by env var $OPEN_LTH_ROOT
+  exp-branches.csv            # for all replicates, levels, and branches (i.e. main and lottery_branch_{hash}), list branch hparams and logger values for last iteration
+  exp-hparams.csv             # for all experiments (i.e.lottery_{hash}), list non-branch hparams
+  lottery_{hash}    # experiment, hash is generated from ALL non-branch hparams, including seed if set
+  replicate_1
+    level_pretrain  # training before child networks are spawned, e.g. model_ep5_it0.pth would be saved here with the args "--pretrain --pretrain_training_steps=10ep"
+      ...           # same structure as level_0
+    level_0         # dense network goes here AFTER pretraining
+      main          # default branch, other branches are typically ablations or baselines
+        hparams.json          # all arguments and hyperparameters, the original open_lth uses a plain text file
+        logger                # saves test accuracy, loss, and num test examples at every callback (usually per ep)
+        mask.pth              # dict of layer_name: zero-one mask (int32 tensor)
+        model_ep160_it0.pth   # model state_dict at epoch 160
+        checkpoint.pth        # used internally by open_lth to reload optimizer state, includes both model and optimizer state_dicts
+        sparsity_report.json  # lists total and unpruned number of weights
+      lottery_branch_{hash}   # hash is generated from branch hparams specifically
+        ...         # same structure as main
+    level_1
+      ...           # same structure as level_0
+```
+
 #### 2.8.1 Summarizing All Results
 
 Running `open_lth` with the argument `--make_tables` will collect all experiments and hyperparameters in `<root>/exp-hparams.csv`.
