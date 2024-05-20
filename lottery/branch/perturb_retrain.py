@@ -18,13 +18,13 @@ from utils.branch_utils import load_dense_model, reinitialize_output_layers
 from utils.file_utils import save_state_dict
 
 
-def batch_noise(model, dataset_hparams, training_hparams, output_location, start_step, n_steps=1):
+def batch_noise(model, dataset_hparams, training_hparams, output_location, start_step, n_steps):
     # make a copy of the model and train it for a single step with random batch order
     copy_model = deepcopy(model)
     training_hparams = deepcopy(training_hparams)
     training_hparams.data_order_seed = None
     train_loader = datasets.registry.get(dataset_hparams, train=True)
-    end_step = start_step + Step.from_iteration(n_steps, start_step._iterations_per_epoch)
+    end_step = start_step + Step.from_str(n_steps, start_step._iterations_per_epoch)
     train.train(training_hparams, copy_model, train_loader, output_location,
                 start_step=start_step, end_step=end_step)
     perturbed_state = copy_model.state_dict()
@@ -91,7 +91,8 @@ class Branch(base.Branch):
         # perturb the model, save the noise
         perturb_source, perturb_combine, *perturb_args = perturb_type.split("_")
         if perturb_source == 'batch':
-            noise = batch_noise(dense_model, retrain_d, retrain_t, os.path.join(self.branch_root, 'batch_noise'), start_step)
+            n_steps = "1it" if len(perturb_args) == 0 else perturb_args[0]
+            noise = batch_noise(dense_model, retrain_d, retrain_t, os.path.join(self.branch_root, 'batch_noise'), start_step, n_steps=n_steps)
         elif perturb_source == 'init':
             noise = init_noise(self.lottery_desc.model_hparams, retrain_d)
         else:
