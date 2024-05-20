@@ -27,6 +27,9 @@ def hparams(root): return Path(root) / 'hparams.json'
 def perm(root): return Path(root) / "perm_mask_source.json"
 
 
+def perturb_noise(root): return Path(root) / 'perturb_noise.pth'
+
+
 def branch_table(root): return Path(root) / "exp-branches.csv"
 
 
