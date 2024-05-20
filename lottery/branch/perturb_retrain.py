@@ -91,6 +91,7 @@ class Branch(base.Branch):
         # perturb the model, save the noise
         perturb_source, perturb_combine, *perturb_args = perturb_type.split("_")
         if perturb_source == 'batch':
+            if perturb_combine == 'linear': raise ValueError("Batch noise should not be combined by linear interpolation.")
             n_steps = "1it" if len(perturb_args) == 0 else perturb_args[0]
             noise = batch_noise(dense_model, retrain_d, retrain_t, os.path.join(self.branch_root, 'batch_noise'), start_step, n_steps=n_steps)
         elif perturb_source == 'init':

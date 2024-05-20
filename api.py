@@ -217,3 +217,46 @@ def find_ckpt_by_it(replicate_dir: Union[Path, str], ep_it: str, branch="main", 
         except ValueError:  # level doesn't exist
             continue
     raise ValueError(f"Cannot find checkpoint {ep_it} in {replicate_dir}, branch {branch}, levels {levels}")
+
+
+"""
+Other files
+"""
+def get_training_log(save_dir: Path) -> Path:
+
+    def assert_list_lengths_equal(dict_of_lists):
+        lists = list(dict_of_lists.values())
+        if not lists:  # no lists
+            return True
+        iterator = iter(lists)
+        the_len = len(next(iterator))
+        assert all(len(l) == the_len for l in iterator), (the_len, dict_of_lists)
+
+    try:
+        with open(logger(save_dir)) as f:
+            log_lines = f.readlines()
+    except:  # nothing logged
+        return {}
+    # collate log info by iteration number
+    iters = []
+    log_data = defaultdict(list)
+    last_it = -1
+    for line in log_lines:
+        key, it, value = line.strip().split(",")
+        if it != last_it:  # check that every type of logged value was logged for each iter
+            assert_list_lengths_equal(log_data)
+            iters.append(it)
+            last_it = it
+        log_data[key].append(value)
+    assert "test_iter" not in log_data
+    log_data["test_iter"] = iters
+    assert_list_lengths_equal(log_data)
+    return log_data
+
+
+def get_json_info(branch_dir):
+    json_info = {}
+    for file in branch_dir.glob("*.json"):
+        with open(file, 'r') as f:
+            json_info[file.stem] = json.load(f)
+    return json_info
