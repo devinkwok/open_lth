@@ -9,6 +9,7 @@ import torch
 
 from foundations import paths
 from platforms.platform import get_platform
+from utils import save_state_dict
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -41,10 +42,7 @@ class Mask(dict):
         return mask
 
     def save(self, output_location):
-        if not get_platform().is_primary_process: return
-        if not get_platform().exists(output_location): get_platform().makedirs(output_location)
-        get_platform().save_model({k: v.cpu().int() for k, v in self.items()}, paths.mask(output_location))
-
+        save_state_dict({k: v.cpu().int() for k, v in self.items()}, paths.mask(output_location))
         # Create a sparsity report.
         total_weights = np.sum([v.size for v in self.numpy().values()]).item()
         total_unpruned = np.sum([np.sum(v) for v in self.numpy().values()]).item()

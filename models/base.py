@@ -10,7 +10,7 @@ import typing
 from foundations import paths
 from foundations.step import Step
 import lottery.desc
-from platforms.platform import get_platform
+from utils import save_state_dict
 
 
 class OutputAffineLayerNorm(torch.nn.Module):
@@ -85,9 +85,7 @@ class Model(torch.nn.Module, abc.ABC):
         pass
 
     def save(self, save_location: str, save_step: Step):
-        if not get_platform().is_primary_process: return
-        if not get_platform().exists(save_location): get_platform().makedirs(save_location)
-        get_platform().save_model(self.state_dict(), paths.model(save_location, save_step))
+        save_state_dict(self.state_dict, paths.model(save_location, save_step))
 
     @staticmethod
     def get_batchnorm(n_filters, batchnorm_type=None):
