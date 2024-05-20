@@ -2,10 +2,10 @@ from pathlib import Path
 from platforms.platform import get_platform
 
 
-def save_state_dict(self, output_file):
+def save_state_dict(state_dict, output_file):
     if not get_platform().is_primary_process: return
     if not get_platform().exists(output_file.parent): get_platform().makedirs(output_file.parent)
-    get_platform().save_model({k: v.cpu().int() for k, v in self.items()}, output_file)
+    get_platform().save_model(state_dict, output_file)
 
 
 """hacky ways to navigate open_lth_data directory across different experiments

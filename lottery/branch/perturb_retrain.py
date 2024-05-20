@@ -15,7 +15,7 @@ from pruning.mask import Mask
 from pruning.pruned_model import PrunedModel
 from training import train
 from utils.branch_utils import load_dense_model, reinitialize_output_layers
-from utils import save_state_dict
+from utils.file_utils import save_state_dict
 
 
 def batch_noise(model, dataset_hparams, training_hparams, output_location, start_step, n_steps=1):
@@ -24,9 +24,12 @@ def batch_noise(model, dataset_hparams, training_hparams, output_location, start
     training_hparams = deepcopy(training_hparams)
     training_hparams.data_order_seed = None
     train_loader = datasets.registry.get(dataset_hparams, train=True)
-    train.train(training_hparams, copy_model, train_loader, output_location, start_step=start_step, end_step=start_step+n_steps)
+    end_step = start_step + Step.from_iteration(n_steps, start_step._iterations_per_epoch)
+    train.train(training_hparams, copy_model, train_loader, output_location,
+                start_step=start_step, end_step=end_step)
     perturbed_state = copy_model.state_dict()
-    return {k: v - perturbed_state[v] for k, v in model.state_dict().items()}
+    noise = {k: v - perturbed_state[k].detach().cpu() for k, v in model.state_dict().items()}
+    return noise
 
 
 def init_noise(model_hparams, dataset_hparams):
@@ -49,7 +52,7 @@ def noise_interpolate(a, b, scale):
 def perturb_model(model, noise, combine_fn, scale, output_location):
     save_state_dict(noise, paths.perturb_noise(output_location))  # save the noise
     state_dict = model.state_dict()
-    perturbed_dict = {k: combine_fn(v, noise[k], scale) * scale for k, v in state_dict.items()}
+    perturbed_dict = {k: combine_fn(v, noise[k], scale) for k, v in state_dict.items()}
     model.load_state_dict(perturbed_dict)
 
 
@@ -75,7 +78,8 @@ class Branch(base.Branch):
             start_step = self.lottery_desc.train_start_step
             state_step = start_step
         else:
-            raise ValueError(f'Invalid starting point {start_at}')
+            start_step = self.lottery_desc.str_to_step(start_at)
+            state_step = start_step
         # translate epoch to new Step object for start_step
         if datasets.registry.iterations_per_epoch(retrain_d) != datasets.registry.iterations_per_epoch(self.lottery_desc.dataset_hparams):
             start_step = Step.from_epoch(start_step.ep, 0, datasets.registry.iterations_per_epoch(retrain_d))

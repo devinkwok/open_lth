@@ -9,7 +9,7 @@ import torch
 
 from foundations import paths
 from platforms.platform import get_platform
-from utils import save_state_dict
+from utils.file_utils import save_state_dict
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
