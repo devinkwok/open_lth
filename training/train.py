@@ -5,6 +5,7 @@
 
 import typing
 import warnings
+import torch
 
 from datasets.base import DataLoader
 import datasets.registry
@@ -94,7 +95,10 @@ def train(
     for ep in range(start_step.ep, end_step.ep + 1):
 
         # Ensure the data order is different for each epoch.
-        train_loader.shuffle(batch_seed(training_hparams, ep))
+        seed = batch_seed(training_hparams, ep)
+        if seed is not None:
+            torch.manual_seed(seed)
+        train_loader.shuffle(seed)
 
         for it, (examples, labels) in enumerate(train_loader):
             # Advance the data loader until the start epoch and iteration.
