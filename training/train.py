@@ -98,6 +98,7 @@ def train(
         seed = batch_seed(training_hparams, ep)
         if seed is not None:
             torch.manual_seed(seed)
+            torch.use_deterministic_algorithms(True)
         train_loader.shuffle(seed)
 
         for it, (examples, labels) in enumerate(train_loader):

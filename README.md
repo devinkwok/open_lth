@@ -288,6 +288,14 @@ If no replicate is specified, `--replicate` will default to 1.
 Use `from open_lth import api` to access helper functions for finding and loading hyperparameters, models, checkpoints, and datasets with a single import statement.
 Note this API is intended for inference only, and may be missing training-related functionality.
 
+
+### 2.9.2 Deterministic training
+
+Set `--data_order_seed` to get deterministic training (including batch ordering and data augmentation). Note that you may need to set an environment variable for deterministic CUDA operations, e.g. `export CUBLAS_WORKSPACE_CONFIG=:4096:8` (the exact instructions from pytorch will vary).
+
+Note that pre-training currently breaks determinism, so do not set `--pretrain`.
+
+
 ### 2.10 Modifying the Training Environment
 
 To suppress the outputs, use the `--quiet` argument.
