@@ -22,7 +22,13 @@ def batch_noise(model, dataset_hparams, training_hparams, output_location, start
     # make a copy of the model and train it for a single step with random batch order
     copy_model = deepcopy(model)
     training_hparams = deepcopy(training_hparams)
+    # set hparams for a random step with LR=1 (note optimizer is not initialized with momentum)
     training_hparams.data_order_seed = None
+    training_hparams.lr = 1.
+    training_hparams.gamma = None
+    training_hparams.milestone_steps = None
+    training_hparams.warmup_steps = None
+    # run the step
     train_loader = datasets.registry.get(dataset_hparams, train=True)
     end_step = start_step + Step.from_str(n_steps, start_step._iterations_per_epoch)
     train.train(training_hparams, copy_model, train_loader, output_location,

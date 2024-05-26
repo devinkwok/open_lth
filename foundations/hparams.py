@@ -248,6 +248,7 @@ class TrainingHparams(Hparams):
     _save_every_n_steps: int = 'Save weights epN_itM every time epoch M is divisible by this value (default None)'
     _save_ckpt_steps: str = 'Save weights at iterations of the form {X}ep[{Y}it] (if missing, it0 is assumed). \
             Defined as comma-separated list of iterations or ranges `{start}-{stop inclusive}[@{skip}] e.g., 1ep,2ep-4ep9it@it3'
+    _always_warmup: str = 'Use lr warmup regardless of actual starting point, e.g. if retraining a branch with 1ep warmup starting at 2ep, warmup will be from 2ep to 3ep'
 
 
 @dataclass
