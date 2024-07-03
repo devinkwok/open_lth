@@ -16,6 +16,9 @@ def make_BranchDesc(BranchHparams: type, name: str):
         lottery_desc: LotteryDesc
         branch_hparams: BranchHparams
 
+        def run_path(self, replicate, level=0) -> str:
+            return self.lottery_desc.run_path(replicate, level, self.hashname)
+
         @staticmethod
         def name_prefix(): return 'lottery_branch_' + name
 

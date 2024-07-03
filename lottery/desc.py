@@ -140,7 +140,7 @@ class LotteryDesc(Desc):
     def train_outputs(self):
         return datasets_registry.num_classes(self.dataset_hparams)
 
-    def run_path(self, replicate: int, pruning_level: Union[str, int], experiment: str = 'main'):
+    def run_path(self, replicate: int, pruning_level: Union[str, int] = 0, experiment: str = 'main'):
         """The location where any run is stored."""
 
         if not isinstance(replicate, int) or replicate <= 0:

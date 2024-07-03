@@ -56,15 +56,15 @@ class LotteryRunner(Runner):
                              not args.quiet, not args.evaluate_only_at_end)
 
     def display_output_location(self):
-        print(self.desc.run_path(self.replicate, 0))
+        print(self.desc.run_path(self.replicate))
 
     def run(self) -> None:
         if self.verbose and get_platform().is_primary_process:
             print('='*82 + f'\nLottery Ticket Experiment (Replicate {self.replicate})\n' + '-'*82)
             print(self.desc.display)
-            print(f'Output Location: {self.desc.run_path(self.replicate, 0)}' + '\n' + '='*82 + '\n')
+            print(f'Output Location: {self.desc.run_path(self.replicate)}' + '\n' + '='*82 + '\n')
 
-        if get_platform().is_primary_process: self.desc.save(self.desc.run_path(self.replicate, 0))
+        if get_platform().is_primary_process: self.desc.save(self.desc.run_path(self.replicate))
         if self.desc.pretrain_training_hparams: self._pretrain()
         if get_platform().is_primary_process: self._establish_initial_weights()
         get_platform().barrier()
@@ -85,7 +85,7 @@ class LotteryRunner(Runner):
             verbose=self.verbose, evaluate_every_epoch=self.evaluate_every_epoch)
 
     def _establish_initial_weights(self):
-        location = self.desc.run_path(self.replicate, 0)
+        location = self.desc.run_path(self.replicate)
         if models.registry.exists(location, self.desc.train_start_step): return
 
         new_model = models.registry.get(self.desc.model_hparams, outputs=self.desc.train_outputs)
@@ -109,7 +109,7 @@ class LotteryRunner(Runner):
         location = self.desc.run_path(self.replicate, level)
         if models.registry.exists(location, self.desc.train_end_step): return
 
-        model = models.registry.load(self.desc.run_path(self.replicate, 0), self.desc.train_start_step,
+        model = models.registry.load(self.desc.run_path(self.replicate), self.desc.train_start_step,
                                      self.desc.model_hparams, self.desc.train_outputs)
         pruned_model = PrunedModel(model, Mask.load(location))
         pruned_model.save(location, self.desc.train_start_step)

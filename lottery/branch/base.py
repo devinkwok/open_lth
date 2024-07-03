@@ -67,13 +67,11 @@ class Branch(Runner):
     @property
     def branch_root(self) -> str:
         """The root for where branch results will be stored for a specific invocation of run()."""
-
-        return self.lottery_desc.run_path(self.replicate, self.level, self.experiment_name)
+        return self.desc.run_path(self.replicate, self.level)
 
     @property
     def level_root(self) -> str:
         """The root of the main experiment on which this branch is based."""
-
         return self.lottery_desc.run_path(self.replicate, self.level)
 
     # Interface that deals with command line arguments.

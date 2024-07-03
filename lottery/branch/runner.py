@@ -52,3 +52,11 @@ class BranchRunner(Runner):
 
     def run(self) -> None:
         self.runner.run()
+
+    @property
+    def desc(self):
+        return self.runner.desc
+
+    @property
+    def replicate(self):
+        return self.runner.replicate

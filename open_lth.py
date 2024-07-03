@@ -37,6 +37,8 @@ def main():
     parser.add_argument('--platform', default='local', help='The platform on which to run the job.')
     parser.add_argument('--display_output_location', action='store_true',
                         help='Display the output location for this job.')
+    parser.add_argument('--save_hparams_only', action='store_true',
+                        help='save the hyperparameters to a json file at the output location, but do not run anything.')
     parser.add_argument('--make_tables', action='store_true',
                         help='Generate csv tables summarizing all experiments and branches.')
 
@@ -53,12 +55,16 @@ def main():
 
     args = parser.parse_args()
     platform = platforms.registry.get(platform_name).create_from_args(args)
-
+    runner = runner_registry.get(runner_name).create_from_args(args)
     if args.display_output_location:
-        platform.run_job(runner_registry.get(runner_name).create_from_args(args).display_output_location)
+        platform.run_job(runner.display_output_location)
         sys.exit(0)
 
-    platform.run_job(runner_registry.get(runner_name).create_from_args(args).run)
+    if args.save_hparams_only:
+        runner.desc.save(runner.desc.run_path(runner.replicate))
+        sys.exit(0)
+
+    platform.run_job(runner.run)
 
     # Summarize all experiments and branches.
     if args.make_tables:
