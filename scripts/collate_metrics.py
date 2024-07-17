@@ -58,14 +58,17 @@ def collate_metrics(save_location, patterns, dry_run):
             # copy over all files matching patterns
             for pattern in patterns:
                 for source_file in source_dir.rglob(pattern):
-                    target_file = target_dir / source_file.relative_to(source_dir)
-                    print(f"Copying {source_file} to {target_file}")
-                    if not dry_run:
-                        if not platform.exists(target_file.parent):
-                            platform.makedirs(target_file.parent)
-                        shutil.copy(source_file, target_file, follow_symlinks=False)
+                    if source_file.is_file():
+                        target_file = target_dir / source_file.relative_to(source_dir)
+                        print(f"Copying {source_file} to {target_file}")
+                        if not dry_run:
+                            if not platform.exists(target_file.parent):
+                                platform.makedirs(target_file.parent)
+                            shutil.copy(source_file, target_file, follow_symlinks=False)
             # save combined hparams, and a separate file indicating original location
             hparam_location = target_dir / "level_0" / "main"
+            if not platform.exists(hparam_location):
+                platform.makedirs(hparam_location)
             print(f"Saving hparam files to {hparam_location}")
             if not dry_run:
                 with open(hparam_location / 'hparams.json', 'w') as file:
@@ -78,8 +81,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--save_dir', required=True, type=Path)
     parser.add_argument('--dry_run', default=False, action="store_true")
+    parser.add_argument('--patterns', default="*", type=str)
     args = parser.parse_args()
 
-    # save checkpoints and final metrics, but ignore the metric checkpoints
-    patterns = ["model_*.pth", "*_*.npz"]
+    # to save checkpoints and final metrics, but ignore the metric checkpoints, use:
+    # "model_*.pth,*_*.npz"
+    patterns = args.patterns.split(",")
     collate_metrics(args.save_dir, patterns, args.dry_run)
