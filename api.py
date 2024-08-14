@@ -105,7 +105,8 @@ def get_dataset(dataset_hparams: hparams.DatasetHparams):
 def get_dataloader(dataset_hparams: hparams.DatasetHparams, n_examples=None, train=False, batch_size=None):
     dataset_hparams.do_not_augment = True
     dataset_hparams.subset_end = n_examples
-    dataset_hparams.batch_size = n_examples if batch_size is None else batch_size
+    # prioritize batch size in this order: batch_size, n_examples, dataset_hparams.batch_size
+    dataset_hparams.batch_size = (dataset_hparams.batch_size if n_examples is None else n_examples) if batch_size is None else batch_size
     return dataset_registry.get(dataset_hparams, train=train)
 
 
