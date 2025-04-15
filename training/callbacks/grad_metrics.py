@@ -9,8 +9,6 @@ from platforms.platform import get_platform
 from training.callbacks import base 
 from api import get_device, get_dataloader
 
-import sys
-sys.path.append("nn_example_difficulty")
 from difficulty import metrics
 
 

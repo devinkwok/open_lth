@@ -10,8 +10,6 @@ from training.utils import batch_seed
 from api import get_device, get_dataset
 from datasets.base import ShuffleSampler
 
-import sys
-sys.path.append("nn_example_difficulty")
 from difficulty import metrics
 from difficulty.model.eval import evaluate_model
 
