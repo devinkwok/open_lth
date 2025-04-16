@@ -11,7 +11,7 @@ from api import get_device, get_dataset
 from datasets.base import ShuffleSampler
 
 from difficulty import metrics
-from difficulty.model.eval import evaluate_model
+from difficulty.model.eval import batch_evaluate_model
 
 
 class Callback(base.Callback):
@@ -57,8 +57,8 @@ class Callback(base.Callback):
 
     def callback_function(self, output_location, step, model, optimizer, logger, examples, labels) -> Any:
         metadata = {"iteration": step.iteration, "ep": step.ep, "it": step.it}
-        minibatch_idx, batch, batch_metadata = self._get_minibatch_idx(step, labels)
-        _, _, minibatch_acc, _ = evaluate_model(model, batch, device=get_device(), return_accuracy=True)
+        minibatch_idx, data, labels, batch_metadata = self._get_minibatch_idx(step, labels)
+        _, _, minibatch_acc, _ = batch_evaluate_model(model, data, labels, device=get_device(), return_accuracy=True)
         for v in self.forget_metrics.values():
             v.add(minibatch_acc, minibatch_idx=minibatch_idx, **metadata, **batch_metadata)
         # save get() from online metrics if schedule is done
@@ -80,7 +80,7 @@ class Callback(base.Callback):
         # check that batches match
         assert torch.equal(labels, batch_labels), (labels, batch_labels)
         signature = self.minibatch_signature(labels)
-        return minibatch_idx, [(batch_data, batch_labels)], {"seed": seed, "signature": signature}
+        return minibatch_idx, batch_data, batch_labels, {"seed": seed, "signature": signature}
 
     @staticmethod
     def minibatch_signature(labels):
