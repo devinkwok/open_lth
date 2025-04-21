@@ -51,6 +51,7 @@ class Dataset(base.ImageDataset, base.NdarrayDataset):
 
     @staticmethod
     def get_train_set(use_augmentation, train_split=None):
+        #NOTE this is an error (not fixed for backwards compatibility): RandomCrop should have fill=MEAN
         augment = [torchvision.transforms.RandomHorizontalFlip(), torchvision.transforms.RandomCrop(32, 4)]
         data, targets = Dataset.get_data_split(True, train_split)
         return Dataset(data, targets, augment if use_augmentation else [])
@@ -61,6 +62,7 @@ class Dataset(base.ImageDataset, base.NdarrayDataset):
         return Dataset(data, targets)
 
     def __init__(self,  examples, labels, image_transforms=None):
+        #NOTE this is also an error (not fixed for backwards compatibility): mean and std do not match the dataset from torchvision
         super(Dataset, self).__init__(examples, labels, image_transforms or [],
                                       [torchvision.transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
 

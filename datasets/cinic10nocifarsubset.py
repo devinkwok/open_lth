@@ -1,8 +1,9 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
-
-# This source code is licensed under the MIT license found in the
-# LICENSE file in the root directory of this source tree.
-
+"""
+cinic10: standard cinic10 dataset
+cinic10: standard cinic10 dataset
+cinic10nocifarsubset: cinic10 *WITHOUT cifar10 train set* for training, cifar10 *train set* for testing, with the training set randomly pruned to 50000 examples (keeping all cifar10 test set examples)
+"""
+from pathlib import Path
 from typing import Optional, Callable
 import numpy as np
 import os
@@ -17,7 +18,6 @@ from datasets.cifar10 import CIFAR10
 from platforms.platform import get_platform
 
 
-
 class CINIC10(torchvision.datasets.cifar.CIFAR10):
     """`CINIC10 <http://dx.doi.org/10.7488/ds/2448>`_ Dataset.
 
@@ -30,6 +30,11 @@ class CINIC10(torchvision.datasets.cifar.CIFAR10):
     filename = "CINIC-10.tar.gz"
     tgz_md5 = "6ee4d0c996905fe93221de577967a372"
 
+    LABELS = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
+    CLASS_TO_IDX = {k: i for i, k in enumerate(LABELS)}
+    SPLITS = ['train', 'valid', 'test']
+    SEED = 42
+
     def __init__(
         self,
         root: str,
@@ -38,6 +43,9 @@ class CINIC10(torchvision.datasets.cifar.CIFAR10):
         target_transform: Optional[Callable] = None,
         download: bool = False,
     ):
+        if not train:
+            raise ValueError("CINIC-10 test set should not be used by cinic10nocifarsubset!")
+
         super(torchvision.datasets.cifar.CIFAR10, self).__init__(root, transform=transform, target_transform=target_transform)
 
         self.train = train  # training set or test set
@@ -45,27 +53,52 @@ class CINIC10(torchvision.datasets.cifar.CIFAR10):
         if download:
             self.download()
 
-        if transform is None:
-            transform = torchvision.transforms.Lambda(lambda img: np.array(img))
+        data_root = Path(self.root)
 
-        # check that path does not contain "cifar10-train-"
-        not_cifar10_train = lambda x: "cifar10-train-" not in str(x)
-        if train:
-            train_data = torchvision.datasets.ImageFolder(
-                os.path.join(self.root, 'train'), transform=transform, is_valid_file=not_cifar10_train)
-            valid_data = torchvision.datasets.ImageFolder(
-                os.path.join(self.root, 'valid'), transform=transform, is_valid_file=not_cifar10_train)
-            test_data = torchvision.datasets.ImageFolder(
-                os.path.join(self.root, 'test'), transform=transform, is_valid_file=not_cifar10_train)
-            data_and_labels = torch.utils.data.ConcatDataset([train_data, valid_data, test_data])
-            assert len(data_and_labels) == Dataset.num_train_examples()
-        else:
-            raise ValueError("No test set defined for cinic10nocifartrain!")
+        def get_data_from_splits(splits, is_valid_file):
+            data = []
+            labels = []
+            for split in splits:
+                dataset = torchvision.datasets.ImageFolder(data_root / split, is_valid_file=is_valid_file)
+                assert dataset.class_to_idx == self.CLASS_TO_IDX
+                for x, y in dataset:
+                    data.append(x)
+                    labels.append(y)
+            data = np.stack(data, axis=0)
+            labels = np.array(labels)
+            return data, labels
 
-        dataloader = torch.utils.data.DataLoader(data_and_labels, batch_size=len(data_and_labels), shuffle=False, num_workers=2)
-        self.data, self.targets = next(iter(dataloader))
-        self.data = self.data.numpy()  # note: PIL already gives order of dims as HWC
-        self.targets = self.targets.numpy()
+        # keep all cifar10 test data
+        def is_cifar_test(x):
+            return Path(x).name.startswith("cifar10-test-")
+        cifar10_test_data, cifar10_test_targets = get_data_from_splits(["test"], is_valid_file=is_cifar_test)
+
+        # prune non-cifar10 data so that total size is same as cifar10, equally per class
+        def is_not_cifar(x):
+            return not Path(x).name.startswith("cifar10-")
+        non_cifar10_data, non_cifar10_targets = get_data_from_splits(self.SPLITS, is_valid_file=is_not_cifar)
+
+        g = torch.Generator()
+        g.manual_seed(self.SEED)
+
+        keep_data_mask = np.zeros(len(non_cifar10_targets), dtype=bool)
+        for label in self.CLASS_TO_IDX.values():
+            label_idx = np.where(non_cifar10_targets == label)[0]
+            # randomly pick: there are 270000 minus 60000 from cifar10, divided by 10 classes, and we want 50000 total including cifar10 test split
+            keep_idx = torch.randperm(21000, generator=g)[:4000].numpy()
+            keep_data_mask[label_idx[keep_idx]] = 1
+        non_cifar10_data = non_cifar10_data[keep_data_mask]
+        non_cifar10_targets = non_cifar10_targets[keep_data_mask]
+
+        # combine all data
+        self.data = np.concatenate([cifar10_test_data, non_cifar10_data], axis=0)
+        self.targets = np.concatenate([cifar10_test_targets, non_cifar10_targets])
+
+        # sanity checks
+        assert len(self.data) == Dataset.num_train_examples()
+        for label in self.CLASS_TO_IDX.values():
+            assert np.count_nonzero(self.targets == label) == 5000, (label, np.count_nonzero(self.targets == label))
+
 
     """Suppress an annoying print statement in the torchvision CIFAR-10 library.
 
@@ -90,7 +123,7 @@ class Dataset(base.ImageDataset, base.NdarrayDataset):
     STD = [0.24205776, 0.23828046, 0.25874835]
 
     @staticmethod
-    def num_train_examples(): return 90000*3 - 50000  # cinic10 size minus cifar10 train size
+    def num_train_examples(): return 50000  # same as cifar10 after pruning
 
     @staticmethod
     def num_test_examples(): return 50000  # cifar10 train size
@@ -110,7 +143,9 @@ class Dataset(base.ImageDataset, base.NdarrayDataset):
 
     @staticmethod
     def get_train_set(use_augmentation, train_split=None):
+        #NOTE this is an error (not fixed to be consistent with old runs of CIFAR10): RandomCrop should have fill=MEAN
         augment = [torchvision.transforms.RandomHorizontalFlip(), torchvision.transforms.RandomCrop(32, 4)]
+        augment = []  #debug
         data, targets = Dataset.get_data_split(True, train_split)
         return Dataset(data, targets, augment if use_augmentation else [])
 

@@ -4,15 +4,17 @@
 # LICENSE file in the root directory of this source tree.
 
 import numpy as np
-from datasets import base, cinic10, cinic10cifartest, cinic10nocifartrain, cifar10, cifar10class5, cifar100, cifar100class20, cifar100class10, mnist, imagenet, svhn, eurosat, pixelpermutedcifar10
+from datasets import base, cinic10, cinic10nocifarsubset, cifar10, cifar10class5, cifar100, cifar100class20, cifar100class10, mnist, imagenet, svhn, eurosat, pixelpermutedcifar10
 from foundations.hparams import DatasetHparams
 from platforms.platform import get_platform
 
-
+"""
+cinic10: standard cinic10 dataset
+cinic10nocifarsubset: cinic10 *WITHOUT cifar10 train set* for training, cifar10 *train set* for testing, with the training set randomly pruned to 50000 examples (keeping all cifar10 test set examples)
+"""
 registered_datasets = {
     'cinic10': cinic10,
-    'cinic10cifartest': cinic10cifartest,
-    'cinic10nocifartrain': cinic10nocifartrain,
+    'cinic10nocifarsubset': cinic10nocifarsubset,
     'cifar10': cifar10,
     'cifar10class5': cifar10class5,
     'cifar100': cifar100,
