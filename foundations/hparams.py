@@ -220,6 +220,7 @@ class TrainingHparams(Hparams):
     data_order_seed: int = None
     momentum: float = 0.0
     nesterov_momentum: float = 0.0
+    lr_schedule: str = "step"
     milestone_steps: str = None
     gamma: float = None
     warmup_steps: str = None
@@ -244,6 +245,7 @@ class TrainingHparams(Hparams):
     _training_steps: str = 'The number of steps to train as epochs (\'160ep\') or iterations (\'50000it\').'
     _momentum: str = 'The momentum to use with the SGD optimizer.'
     _nesterov: bool = 'The nesterov momentum to use with the SGD optimizer. Cannot set both momentum and nesterov.'
+    _lr_schedule: str = 'Type of learning rate schedule, options are step, onecycle. milestone_steps and gamma only work for step schedule.'
     _milestone_steps: str = 'Steps when the learning rate drops by a factor of gamma. Written as comma-separated ' \
                             'steps (80ep,160ep,240ep) where steps are epochs (\'160ep\') or iterations (\'50000it\').'
     _gamma: str = 'The factor at which to drop the learning rate at each milestone.'

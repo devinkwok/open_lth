@@ -32,6 +32,18 @@ def get_optimizer(training_hparams: TrainingHparams, model: Model) -> torch.opti
 
 
 def get_lr_schedule(training_hparams: TrainingHparams, optimizer: torch.optim.Optimizer, iterations_per_epoch: int, warmup_from: Step=None):
+
+    schedules = {
+        "onecycle": onecycle_lr_schedule,
+        "step": step_lr_schedule,
+    }
+    if training_hparams.lr_schedule not in schedules:
+        raise ValueError(f"Invalid lr schedule {training_hparams.lr_schedule}: options are {list(schedules.keys())}")
+
+    return schedules[training_hparams.lr_schedule](training_hparams, optimizer, iterations_per_epoch, warmup_from)
+
+
+def step_lr_schedule(training_hparams: TrainingHparams, optimizer: torch.optim.Optimizer, iterations_per_epoch: int, warmup_from: Step=None):
     lambdas = [lambda it: 1.0]
 
     # Drop the learning rate according to gamma at the specified milestones.
@@ -50,3 +62,20 @@ def get_lr_schedule(training_hparams: TrainingHparams, optimizer: torch.optim.Op
 
     # Combine the lambdas.
     return torch.optim.lr_scheduler.LambdaLR(optimizer, lambda it: np.product([l(it) for l in lambdas]))
+
+
+def onecycle_lr_schedule(training_hparams: TrainingHparams, optimizer: torch.optim.Optimizer, iterations_per_epoch: int, warmup_from: Step=None):
+    total_steps = Step.from_str(training_hparams.training_steps, iterations_per_epoch).iteration
+    warmup_iters = Step.from_str(training_hparams.warmup_steps, iterations_per_epoch).iteration
+    warmup_ratio = warmup_iters / total_steps
+    if warmup_from is None:
+        return torch.optim.lr_scheduler.OneCycleLR(
+            optimizer=optimizer,
+            max_lr=training_hparams.lr,
+            total_steps=total_steps,
+            anneal_strategy="cos",
+            pct_start=warmup_ratio,
+        )
+    #TODO if warmup_from is not None, copy lr of warmup period (0 to warmup_iters) to start at warmup_from, and set lr to 0 beforehand
+    # i.e. if warmup_from=2, turn lrs=[0, 0.5, 1, 0.8, 0.6, 0.4, 0.2, 0] into lrs=[0, 0, 0, 0.5, ]
+    raise NotImplementedError(f"warmup_from={warmup_from} not implemented for onecycle lr schedule")
