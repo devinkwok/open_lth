@@ -66,8 +66,13 @@ def step_lr_schedule(training_hparams: TrainingHparams, optimizer: torch.optim.O
 
 def onecycle_lr_schedule(training_hparams: TrainingHparams, optimizer: torch.optim.Optimizer, iterations_per_epoch: int, warmup_from: Step=None):
     total_steps = Step.from_str(training_hparams.training_steps, iterations_per_epoch).iteration
-    warmup_iters = Step.from_str(training_hparams.warmup_steps, iterations_per_epoch).iteration
-    warmup_ratio = warmup_iters / total_steps
+
+    # Add warmup period if specified.
+    warmup_ratio = 0
+    if training_hparams.warmup_steps:
+        warmup_iters = Step.from_str(training_hparams.warmup_steps, iterations_per_epoch).iteration
+        warmup_ratio = warmup_iters / total_steps
+
     if warmup_from is None:
         return torch.optim.lr_scheduler.OneCycleLR(
             optimizer=optimizer,
@@ -78,4 +83,5 @@ def onecycle_lr_schedule(training_hparams: TrainingHparams, optimizer: torch.opt
         )
     #TODO if warmup_from is not None, copy lr of warmup period (0 to warmup_iters) to start at warmup_from, and set lr to 0 beforehand
     # i.e. if warmup_from=2, turn lrs=[0, 0.5, 1, 0.8, 0.6, 0.4, 0.2, 0] into lrs=[0, 0, 0, 0.5, ]
-    raise NotImplementedError(f"warmup_from={warmup_from} not implemented for onecycle lr schedule")
+    else:
+        raise NotImplementedError(f"warmup_from={warmup_from} not implemented for onecycle lr schedule")
